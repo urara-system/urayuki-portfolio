@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>浦侑希 職務経歴 ｜ Marketing / Growth Partner</title>
 <meta name="color-scheme" content="dark">
 <style>
@@ -30,6 +31,21 @@
    - ヒーローの方眼を大小2層のブループリントグリッドに強化、
      ナビカードにL字コーナーマーカー、セクション罫線に計測目盛り。
    - ヒーロー背景を細胞質ドリフト（.cyto ブロブ）に置き換え。
+
+   v6 変更点（世界観の全面展開・構造/機能/文言は不変）:
+   - ヒーロー限定だった方眼グリッド・電場グロー・細胞質ブロブを、
+     <body>直下の固定背景レイヤー .world（position:fixed; 全ビュー共通）へ
+     移設。どのビュー・どのスクロール位置でも同じ世界が続く。
+     本文可読性維持のため低opacity・部分マスクで主張は抑える。
+     main/.foot に z-index:1 を与え、コンテンツは常に背景の上。
+   - 02業務内容／03実績のカードグリッドにもシナプス結線 .grid-net を敷設
+     （viewBox 0 0 100 100 + preserveAspectRatio:none。カードは不透明なので
+     結線はガター部分にだけ現れる。1カラム収束時は非表示・aria-hidden）。
+   - L字コーナーマーカーを cap-card / doc-card / define / cap-extra /
+     contact-form へ展開。work-head に計測目盛り罫線、フォーム入力欄に
+     コーナーティック（background-imageによるL字）を追加。
+   - ビュー遷移時、クリック地点からシナプス光が広がる .warp オーバーレイ
+     （JS生成・pointer-events:none・reduce環境では生成/アニメとも無効）。
    ============================================================= */
 
 :root{
@@ -131,7 +147,7 @@ button{
   html.js .hero-load > *:nth-child(4){ animation-delay:.35s; }
   html.js .hero-load > *:nth-child(5){ animation-delay:.45s; }
   html.js .hero-load > *:nth-child(6){ animation-delay:.55s; }
-  .hero::after{ animation:fielddrift 18s ease-in-out infinite alternate; }
+  .world-glow{ animation:fielddrift 18s ease-in-out infinite alternate; }
   /* 細胞質ブロブの流動（reduce環境では静止したグラデーションのまま） */
   .cyto span:nth-child(1){ animation:cyto1 22s ease-in-out infinite alternate; }
   .cyto span:nth-child(2){ animation:cyto2 27s ease-in-out infinite alternate; }
@@ -143,7 +159,11 @@ button{
     .syn-dot{ opacity:1; animation:synflow 6.5s cubic-bezier(.45,.05,.55,.95) infinite; }
     .syn-dot.d2{ animation-delay:2.1s; }
     .syn-dot.d3{ animation-delay:4.3s; }
+    .syn-dot.gd2{ animation-delay:3.3s; }
   }
+
+  /* --- ビュー遷移オーバーレイ：クリック地点からシナプス光が広がる --- */
+  html.js .warp.on{ animation:viewwarp .7s cubic-bezier(.22,.61,.36,1); }
 
   /* --- viz（SVG図解）の描画アニメーション --- */
   .anim-x{ transform-box:fill-box; transform-origin:left center; transition:transform 1s cubic-bezier(.22,.61,.36,1) .15s; }
@@ -181,6 +201,11 @@ button{
   10%{ opacity:1; }
   80%{ opacity:1; }
   96%,100%{ offset-distance:100%; opacity:0; }
+}
+@keyframes viewwarp{
+  0%{ opacity:0; transform:scale(.35); }
+  18%{ opacity:1; }
+  100%{ opacity:0; transform:scale(2.6); }
 }
 
 /* ---------- topbar ---------- */
@@ -253,46 +278,74 @@ button{
 
 .stitch-line{ height:1px; background-image:var(--trace); opacity:.5; border:none; margin:2.6rem 0; }
 
-/* ---------- hero ---------- */
-.hero{ position:relative; overflow:hidden; isolation:isolate; background:var(--void); border-bottom:1px solid var(--line-soft); }
-/* ブループリント方眼：大グリッド60px＋細分グリッド12pxの2層（設計図の精密さ） */
-.hero::before{
-  content:""; position:absolute; inset:0; z-index:-2; pointer-events:none;
-  background-image:
-    linear-gradient(rgba(79,216,232,0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(79,216,232,0.055) 1px, transparent 1px),
-    linear-gradient(rgba(79,216,232,0.024) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(79,216,232,0.024) 1px, transparent 1px);
-  background-size:60px 60px, 60px 60px, 12px 12px, 12px 12px;
-  -webkit-mask-image:radial-gradient(130% 100% at 50% 0%, #000 25%, transparent 78%);
-  mask-image:radial-gradient(130% 100% at 50% 0%, #000 25%, transparent 78%);
-}
+/* ---------- world（全ビュー共通の固定背景レイヤー） ----------
+   ヒーロー限定だった方眼・グロー・細胞質ブロブを viewport 固定で全画面に展開。
+   どのビューを開いても・どこまでスクロールしても同じ世界が続く。
+   装飾のみ（aria-hidden）。コンテンツ側は main/.foot の z-index:1 で常に上。 */
+.world{ position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+main, .foot{ position:relative; z-index:1; }
 /* ベースの電場グロー（静的な下地。動きは .cyto が担う） */
-.hero::after{
-  content:""; position:absolute; inset:-25%; z-index:-3; pointer-events:none;
+.world-glow{
+  position:absolute; inset:-25%;
   background:
-    radial-gradient(42% 38% at 74% 16%, rgba(76,102,245,0.30) 0%, transparent 68%),
-    radial-gradient(30% 32% at 12% 70%, rgba(79,216,232,0.10) 0%, transparent 70%),
-    radial-gradient(26% 24% at 42% 8%, rgba(157,140,255,0.10) 0%, transparent 70%);
+    radial-gradient(42% 38% at 74% 16%, rgba(76,102,245,0.26) 0%, transparent 68%),
+    radial-gradient(30% 32% at 12% 70%, rgba(79,216,232,0.09) 0%, transparent 70%),
+    radial-gradient(26% 24% at 42% 8%, rgba(157,140,255,0.09) 0%, transparent 70%);
+}
+/* ブループリント方眼：大グリッド60px＋細分グリッド12pxの2層（設計図の精密さ）。
+   画面上部で最も濃く、下端でも消し切らない（世界が途切れない）よう部分マスク */
+.world-grid{
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(79,216,232,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,216,232,0.05) 1px, transparent 1px),
+    linear-gradient(rgba(79,216,232,0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,216,232,0.022) 1px, transparent 1px);
+  background-size:60px 60px, 60px 60px, 12px 12px, 12px 12px;
+  -webkit-mask-image:radial-gradient(125% 95% at 50% 0%, #000 28%, rgba(0,0,0,0.3) 100%);
+  mask-image:radial-gradient(125% 95% at 50% 0%, #000 28%, rgba(0,0,0,0.3) 100%);
 }
 /* 細胞質ブロブ：緩やかに形を変えながら漂う（aria-hidden・装飾のみ） */
-.cyto{ position:absolute; inset:0; z-index:-2; overflow:hidden; pointer-events:none; }
+.cyto{ position:absolute; inset:0; overflow:hidden; pointer-events:none; }
 .cyto span{ position:absolute; display:block; }
 .cyto span:nth-child(1){
-  width:46%; padding-top:36%; left:56%; top:-18%;
+  width:46%; padding-top:36%; left:55%; top:-12%;
   border-radius:52% 48% 61% 39% / 46% 54% 46% 54%;
-  background:radial-gradient(closest-side, rgba(76,102,245,0.26) 0%, rgba(76,102,245,0.08) 55%, transparent 74%);
+  background:radial-gradient(closest-side, rgba(76,102,245,0.22) 0%, rgba(76,102,245,0.07) 55%, transparent 74%);
 }
 .cyto span:nth-child(2){
-  width:36%; padding-top:30%; left:-12%; top:40%;
+  width:36%; padding-top:30%; left:-14%; top:52%;
   border-radius:58% 42% 45% 55% / 52% 48% 55% 45%;
-  background:radial-gradient(closest-side, rgba(79,216,232,0.14) 0%, rgba(79,216,232,0.05) 55%, transparent 76%);
+  background:radial-gradient(closest-side, rgba(79,216,232,0.12) 0%, rgba(79,216,232,0.04) 55%, transparent 76%);
 }
 .cyto span:nth-child(3){
-  width:26%; padding-top:24%; left:32%; top:-14%;
+  width:26%; padding-top:24%; left:26%; top:12%;
   border-radius:50% 50% 42% 58% / 55% 45% 58% 42%;
-  background:radial-gradient(closest-side, rgba(157,140,255,0.13) 0%, rgba(157,140,255,0.04) 55%, transparent 76%);
+  background:radial-gradient(closest-side, rgba(157,140,255,0.11) 0%, rgba(157,140,255,0.04) 55%, transparent 76%);
 }
+/* モバイルは簡略化：細分グリッドを落とし、ブロブは静止・1枚減らす（負荷対策） */
+@media (max-width:640px){
+  .world-grid{
+    background-image:
+      linear-gradient(rgba(79,216,232,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,216,232,0.05) 1px, transparent 1px);
+    background-size:60px 60px, 60px 60px;
+  }
+  .cyto span{ animation:none !important; }
+  .cyto span:nth-child(3){ display:none; }
+}
+
+/* ビュー遷移オーバーレイ（JS生成・装飾のみ・クリック不可）。
+   アニメーションは no-preference ブロック側でのみ付与＝reduce環境では常に不可視 */
+.warp{
+  position:fixed; inset:0; z-index:80; pointer-events:none; opacity:0;
+  background:
+    radial-gradient(circle 90px at var(--wx,50%) var(--wy,40%), rgba(139,234,245,0.30) 0%, transparent 100%),
+    radial-gradient(circle 320px at var(--wx,50%) var(--wy,40%), rgba(79,216,232,0.16) 0%, rgba(108,124,255,0.10) 45%, transparent 72%);
+}
+
+/* ---------- hero ---------- */
+.hero{ position:relative; overflow:hidden; isolation:isolate; border-bottom:1px solid var(--line-soft); }
 .amb{ position:absolute; inset:0; z-index:-1; overflow:hidden; pointer-events:none; }
 .amb span{
   position:absolute; font-family:var(--font-sans); font-weight:600; white-space:nowrap;
@@ -307,6 +360,9 @@ button{
   display:grid; grid-template-columns:minmax(0,1fr) 168px; gap:clamp(1.6rem,4vw,3rem);
   align-items:start;
 }
+/* グリッドアイテムは既定でmin-width:autoのため、長いテキストが折り返さずトラックを押し広げる
+   （いわゆるgrid blowout）。明示的に0にして必ずコンテナ幅で折り返させる。 */
+.hero-inner > *{ min-width:0; }
 @media (max-width:680px){ .hero-inner{ grid-template-columns:1fr; } }
 .hero-title{
   margin:1rem 0 0; color:var(--ink); font-family:var(--font-sans);
@@ -390,7 +446,7 @@ button{
 .home-nav{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1.1rem; }
 @media (max-width:760px){ .home-nav{ grid-template-columns:1fr; } }
 .nav-card{
-  position:relative; display:flex; flex-direction:column; min-height:13.5rem;
+  position:relative; display:flex; flex-direction:column; min-height:13.5rem; min-width:0;
   padding:1.5rem 1.4rem 1.35rem;
   border:1px solid var(--line); border-radius:12px;
   background:linear-gradient(160deg, var(--cell-2) 0%, var(--cell) 45%);
@@ -597,11 +653,45 @@ html:not(.js) .crumbs{ display:none; }
 .stage{ position:relative; }
 .stage-panel{ scroll-margin-top:5.5rem; }
 
+/* ---------- grid-net：カードグリッド同士を結ぶシナプス結線（装飾のみ） ----------
+   viewBox 0 0 100 100 を preserveAspectRatio:none でグリッド全域に引き伸ばす。
+   カード（--cell面・不透明）が上に載るため、結線・ノードはガター部分にだけ現れる。
+   カード高さが変わっても破綻しない。1カラム収束時（<=680px）は非表示。 */
+.cap-grid, .work-grid{ position:relative; }
+.cap-grid > .cap-card{ position:relative; z-index:1; }
+.work-grid > .doc-card{ z-index:1; }
+.grid-net{ position:absolute; inset:0; width:100%; height:100%; z-index:0; }
+.grid-net .syn-line{ stroke:rgba(79,216,232,0.22); }
+.grid-net .gd1{ offset-path:path("M25 17 C50 17 50 50 75 50"); }
+.grid-net .gd2{ offset-path:path("M75 50 C50 50 50 83 25 83"); }
+@media (max-width:680px){ .grid-net{ display:none; } }
+
+/* ---------- L字コーナーマーカーの全体展開（nav-cardと同じ設計思想・装飾のみ） ---------- */
+.cap-card, .define, .cap-extra, .contact-form{ position:relative; }
+.cap-card::before, .cap-card::after,
+.doc-card::before, .doc-card::after,
+.define::before, .define::after,
+.cap-extra::before, .cap-extra::after,
+.contact-form::before, .contact-form::after{
+  content:""; position:absolute; width:10px; height:10px; pointer-events:none; z-index:2;
+  transition:border-color .18s ease;
+}
+.cap-card::before, .doc-card::before, .define::before, .cap-extra::before, .contact-form::before{
+  top:6px; left:6px;
+  border-top:1px solid rgba(79,216,232,0.35); border-left:1px solid rgba(79,216,232,0.35);
+}
+.cap-card::after, .doc-card::after, .define::after, .cap-extra::after, .contact-form::after{
+  bottom:6px; right:6px;
+  border-bottom:1px solid rgba(79,216,232,0.35); border-right:1px solid rgba(79,216,232,0.35);
+}
+.cap-card:hover::before, .doc-card:hover::before{ border-top-color:var(--synapse-bright); border-left-color:var(--synapse-bright); }
+.cap-card:hover::after, .doc-card:hover::after{ border-bottom-color:var(--synapse-bright); border-right-color:var(--synapse-bright); }
+
 /* --- Level1: 業務内容 6カードグリッド --- */
 .cap-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-top:1.6rem; }
 @media (max-width:680px){ .cap-grid{ grid-template-columns:1fr; } }
 .cap-card{
-  display:flex; flex-direction:column; align-items:stretch; width:100%; text-align:left;
+  display:flex; flex-direction:column; align-items:stretch; width:100%; min-width:0; text-align:left;
   border:1px solid var(--line); border-radius:10px;
   background:linear-gradient(160deg, var(--cell-2) 0%, var(--cell) 45%);
   box-shadow:var(--shadow); cursor:pointer;
@@ -695,7 +785,7 @@ html:not(.js) .crumbs{ display:none; }
 .work-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-top:1.6rem; }
 @media (max-width:680px){ .work-grid{ grid-template-columns:1fr; } }
 .doc-card{
-  position:relative; display:flex; flex-direction:column; align-items:stretch; width:100%; text-align:left; overflow:hidden;
+  position:relative; display:flex; flex-direction:column; align-items:stretch; width:100%; min-width:0; text-align:left; overflow:hidden;
   background:linear-gradient(160deg, var(--cell-2) 0%, var(--cell) 45%);
   border:1px solid var(--line); border-radius:10px;
   color:inherit; cursor:pointer;
@@ -737,7 +827,22 @@ html:not(.js) .crumbs{ display:none; }
 
 /* ---------- works Level2: 実績詳細 ---------- */
 .work-detail{ scroll-margin-top:5.5rem; }
-.work-head{ display:flex; flex-wrap:wrap; align-items:baseline; gap:0.7rem 1rem; }
+.work-head{
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:0.7rem 1rem;
+  position:relative; padding-top:1rem; border-top:1px solid var(--line);
+}
+/* sec-head と同じ計測モチーフ：左のシナプスグラデ線＋右の目盛り（装飾のみ） */
+.work-head::before{
+  content:""; position:absolute; top:-1px; left:0; width:4.5rem; height:1px;
+  background:linear-gradient(90deg, var(--synapse), transparent);
+  box-shadow:0 0 12px rgba(79,216,232,0.55);
+}
+.work-head::after{
+  content:""; position:absolute; top:-1px; right:0; width:34%; height:6px; pointer-events:none;
+  background:repeating-linear-gradient(90deg, rgba(233,238,247,0.22) 0 1px, transparent 1px 18px);
+  -webkit-mask-image:linear-gradient(90deg, transparent, #000 45%);
+  mask-image:linear-gradient(90deg, transparent, #000 45%);
+}
 .work-head .eyebrow{ font-family:var(--font-mono); font-weight:600; font-size:0.7rem; letter-spacing:0.18em; color:var(--synapse); }
 .work-head h3{ margin:0; font-size:clamp(1.15rem,2.3vw,1.4rem); font-family:var(--font-sans); font-weight:700; letter-spacing:0.03em; flex-basis:100%; }
 .work-meta{ display:flex; flex-wrap:wrap; gap:0.4rem 0.8rem; align-items:center; font-size:0.78rem; color:var(--ink-soft); margin-top:0.5rem; }
@@ -795,7 +900,16 @@ html:not(.js) .crumbs{ display:none; }
 .field input[type="email"],
 .field textarea{
   width:100%; display:block;
-  background:var(--void-2); color:var(--ink);
+  background-color:var(--void-2); color:var(--ink);
+  /* 設計図のコーナーティック（左上・右下のL字を background-image で描画） */
+  background-image:
+    linear-gradient(rgba(79,216,232,0.4), rgba(79,216,232,0.4)),
+    linear-gradient(rgba(79,216,232,0.4), rgba(79,216,232,0.4)),
+    linear-gradient(rgba(79,216,232,0.4), rgba(79,216,232,0.4)),
+    linear-gradient(rgba(79,216,232,0.4), rgba(79,216,232,0.4));
+  background-repeat:no-repeat;
+  background-size:10px 1px, 1px 10px, 10px 1px, 1px 10px;
+  background-position:left top, left top, right bottom, right bottom;
   border:1px solid var(--line); border-radius:6px;
   font-family:var(--font-sans); font-size:0.92rem; line-height:1.8;
   padding:0.65rem 0.85rem;
@@ -829,9 +943,18 @@ html:not(.js) .crumbs{ display:none; }
 }
 
 .foot{ max-width:900px; margin:0 auto; padding:2.4rem clamp(1.1rem,4vw,2rem) 3rem; border-top:1px solid var(--line); margin-top:3rem; font-size:0.76rem; color:var(--ink-soft); display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+
 </style>
 
 <a class="skip" href="#main">本文へスキップ</a>
+
+<!-- 全ビュー共通の固定背景レイヤー：Synapse Blueprintの世界（電場グロー＋方眼＋細胞質ブロブ）。
+     position:fixed でどのビュー・どのスクロール位置でも同じ世界が続く。装飾のみ。 -->
+<div class="world" aria-hidden="true">
+  <div class="world-glow"></div>
+  <div class="world-grid"></div>
+  <div class="cyto"><span></span><span></span><span></span></div>
+</div>
 
 <svg class="icon-defs" aria-hidden="true">
   <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
@@ -909,7 +1032,6 @@ html:not(.js) .crumbs{ display:none; }
   <!-- ============ ホーム（ヒーロー＋3枚のナビゲーションカード） ============ -->
   <div class="view" id="home" data-view="home">
     <section class="hero">
-      <div class="cyto" aria-hidden="true"><span></span><span></span><span></span></div>
       <div class="amb" aria-hidden="true">
         <span style="top:8%; left:6%;">挑戦をやめるまでは、失敗ではない</span>
         <span style="top:30%; right:8%;">短期の即効性と中長期の設計</span>
@@ -1005,6 +1127,18 @@ html:not(.js) .crumbs{ display:none; }
         <p class="sec-lede">広告代理店・サイト制作・SNS運用と分断されがちな領域を、チャネル横断で一気通貫に実行できることが強みです。「何からやるべきか」の整理から数値を見た次の一手まで、判断と実行を同時に任せられます。カードを選ぶと、その領域を裏付ける実績まで潜れます。</p>
 
         <div class="cap-grid">
+          <!-- カード間を結ぶシナプス結線（装飾のみ。カードが不透明なのでガター部分にだけ現れる） -->
+          <svg class="grid-net" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+            <path class="syn-line" d="M50 2 L50 98"/>
+            <path class="syn-line" d="M25 17 C50 17 50 50 75 50"/>
+            <path class="syn-line" d="M75 17 C50 17 50 50 25 50"/>
+            <path class="syn-line" d="M25 50 C50 50 50 83 75 83"/>
+            <path class="syn-line" d="M75 50 C50 50 50 83 25 83"/>
+            <circle class="syn-node" cx="50" cy="33.5" r="0.55"/>
+            <circle class="syn-node" cx="50" cy="66.5" r="0.55"/>
+            <circle class="syn-dot gd1" r="0.5"/>
+            <circle class="syn-dot gd2" r="0.5"/>
+          </svg>
 
           <button type="button" class="cap-card" data-open-cap="strategy">
             <span class="cap-no">C-01</span>
@@ -1209,6 +1343,18 @@ html:not(.js) .crumbs{ display:none; }
         </div>
 
         <div class="work-grid">
+          <!-- カード間を結ぶシナプス結線（装飾のみ。カードが不透明なのでガター部分にだけ現れる） -->
+          <svg class="grid-net" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+            <path class="syn-line" d="M50 2 L50 98"/>
+            <path class="syn-line" d="M25 17 C50 17 50 50 75 50"/>
+            <path class="syn-line" d="M75 17 C50 17 50 50 25 50"/>
+            <path class="syn-line" d="M25 50 C50 50 50 83 75 83"/>
+            <path class="syn-line" d="M75 50 C50 50 50 83 25 83"/>
+            <circle class="syn-node" cx="50" cy="33.5" r="0.55"/>
+            <circle class="syn-node" cx="50" cy="66.5" r="0.55"/>
+            <circle class="syn-dot gd1" r="0.5"/>
+            <circle class="syn-dot gd2" r="0.5"/>
+          </svg>
 
           <button type="button" class="doc-card" data-open-work="meme">
             <div class="thumb thumb-graphic tone-c1"><svg class="ic" aria-hidden="true"><use href="#ic-meme"></use></svg></div>
@@ -1863,6 +2009,39 @@ html:not(.js) .crumbs{ display:none; }
     resetWorksStage();
     Object.keys(views).forEach(function (k) { views[k].hidden = (k !== 'home'); });
 
+    /* ---------- 階層遷移トランジション：クリック地点からシナプス光が広がる ----------
+       装飾のみ（.warp は pointer-events:none / aria-hidden）。既存の遷移ロジックには
+       一切触れず、ナビゲーション系トリガーのクリックを横から観測して重ねる。
+       reduce環境ではオーバーレイ自体を生成しない＝通常の即時切り替えのまま。 */
+    var warpEl = null;
+    function warpFrom(x, y) {
+      if (reduced) return;
+      if (!warpEl) {
+        warpEl = document.createElement('div');
+        warpEl.className = 'warp';
+        warpEl.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(warpEl);
+      }
+      warpEl.style.setProperty('--wx', x + 'px');
+      warpEl.style.setProperty('--wy', y + 'px');
+      warpEl.style.transformOrigin = x + 'px ' + y + 'px';
+      warpEl.classList.remove('on');
+      void warpEl.offsetWidth; /* reflow で再アニメーションを許可 */
+      warpEl.classList.add('on');
+    }
+    document.addEventListener('click', function (ev) {
+      if (reduced || !ev.target || !ev.target.closest) return;
+      var t = ev.target.closest('[data-goto],[data-open-cap],[data-open-work],[data-open-work-from-cap],[data-cap-back],[data-work-back]');
+      if (!t) return;
+      var x = ev.clientX, y = ev.clientY;
+      if (!x && !y) { /* キーボード操作（Enter/Space）ではトリガー要素の中心から */
+        var r = t.getBoundingClientRect();
+        x = r.left + r.width / 2;
+        y = r.top + r.height / 2;
+      }
+      warpFrom(x, y);
+    });
+
     /* ---------- ハッシュ直リンク対応（#profile / #capability / #works / #contact / #work-xxx） ---------- */
     function routeFromHash() {
       var h = location.hash.replace('#', '');
@@ -1886,4 +2065,5 @@ html:not(.js) .crumbs{ display:none; }
     }
   });
 })();
+
 </script>
