@@ -46,6 +46,22 @@
      コーナーティック（background-imageによるL字）を追加。
    - ビュー遷移時、クリック地点からシナプス光が広がる .warp オーバーレイ
      （JS生成・pointer-events:none・reduce環境では生成/アニメとも無効）。
+
+   v7 変更点（生成的グラフィックへの全面刷新・構造/機能/文言は不変）:
+   - .world 内に Canvas 2D の「ニューラルパーティクルネットワーク」を常設
+     （.neural / vanilla JS・外部ライブラリなし）。ノイズフローで漂うノード
+     ＋距離減衰の接続線＋接続線上を走るシナプスパルス＋カーソル追従の
+     一時接続。ホーム（ヒーロー）では高密度、他ビューでは粒子数と輝度を
+     自動的に落とす（portfolio:view カスタムイベントで連動）。
+     reduce環境ではループを起動せず静止1フレームのみ描画。
+   - v6の .cyto（CSSブロブ3枚）を廃止し、SVGゴーフィルタ（feGaussianBlur＋
+     feColorMatrixのアルファ閾値）による「細胞質メタボール」.cyto-svg に刷新。
+     7つの円が近づくと融合し離れると分離する。アニメーションは
+     no-preferenceブロック内のみ＝reduce環境・モバイルでは静止。
+   - v6の .grid-net（02/03グリッドの静的SVG結線）は撤去。カードのガター
+     には全画面の生成的ネットワークがそのまま透けて見える。
+   - 可読性担保：.world::after に本文カラム中心の暗色スクリム（半透明の
+     ヴィネット）を常設し、テキスト背後のパーティクル輝度を抑える。
    ============================================================= */
 
 :root{
@@ -148,10 +164,18 @@ button{
   html.js .hero-load > *:nth-child(5){ animation-delay:.45s; }
   html.js .hero-load > *:nth-child(6){ animation-delay:.55s; }
   .world-glow{ animation:fielddrift 18s ease-in-out infinite alternate; }
-  /* 細胞質ブロブの流動（reduce環境では静止したグラデーションのまま） */
-  .cyto span:nth-child(1){ animation:cyto1 22s ease-in-out infinite alternate; }
-  .cyto span:nth-child(2){ animation:cyto2 27s ease-in-out infinite alternate; }
-  .cyto span:nth-child(3){ animation:cyto3 19s ease-in-out infinite alternate; }
+  /* 細胞質メタボールの流動（reduce環境では静止した融合形のまま）。
+     負のdelayで各円の位相をずらし、常にどこかで融合・分離が起きている状態にする。
+     モバイル（<=640px）はフィルタ再描画コストを避けるため静止。 */
+  @media (min-width:641px){
+    .cyto-svg .gb1{ animation:gb1 34s ease-in-out infinite; }
+    .cyto-svg .gb2{ animation:gb2 26s ease-in-out infinite -8s; }
+    .cyto-svg .gb3{ animation:gb3 21s ease-in-out infinite -4s; }
+    .cyto-svg .gb4{ animation:gb4 30s ease-in-out infinite -12s; }
+    .cyto-svg .gb5{ animation:gb5 24s ease-in-out infinite -6s; }
+    .cyto-svg .gb6{ animation:gb6 46s ease-in-out infinite -20s; }
+    .cyto-svg .gb7{ animation:gb7 28s ease-in-out infinite -15s; }
+  }
   .doc-card, .doc-card .go .arrow, .cap-card, .cap-cta .arrow{ transition-duration:.18s; }
 
   /* --- シナプス接続線を流れる光の粒（offset-path対応環境のみ表示） --- */
@@ -159,7 +183,6 @@ button{
     .syn-dot{ opacity:1; animation:synflow 6.5s cubic-bezier(.45,.05,.55,.95) infinite; }
     .syn-dot.d2{ animation-delay:2.1s; }
     .syn-dot.d3{ animation-delay:4.3s; }
-    .syn-dot.gd2{ animation-delay:3.3s; }
   }
 
   /* --- ビュー遷移オーバーレイ：クリック地点からシナプス光が広がる --- */
@@ -183,17 +206,43 @@ button{
   from{ opacity:.85; transform:translate3d(0,0,0) scale(1); }
   to{ opacity:1; transform:translate3d(2%,1.5%,0) scale(1.06); }
 }
-@keyframes cyto1{
-  from{ transform:translate3d(0,0,0) rotate(0deg) scale(1); border-radius:52% 48% 61% 39% / 46% 54% 46% 54%; }
-  to{ transform:translate3d(-5%,7%,0) rotate(9deg) scale(1.14); border-radius:38% 62% 46% 54% / 58% 42% 60% 40%; }
+/* 細胞質メタボールの軌道。translateの単位pxはviewBox（1200x800）のユーザー座標。
+   互いの軌道が周期的に交差する振幅にして、融合（メタボール接合）と分離を繰り返させる */
+@keyframes gb1{
+  0%,100%{ transform:translate(0,0) scale(1); }
+  38%{ transform:translate(-170px,120px) scale(1.14); }
+  70%{ transform:translate(50px,50px) scale(0.92); }
 }
-@keyframes cyto2{
-  from{ transform:translate3d(0,0,0) rotate(0deg) scale(1); border-radius:58% 42% 45% 55% / 52% 48% 55% 45%; }
-  to{ transform:translate3d(7%,-5%,0) rotate(-11deg) scale(1.1); border-radius:44% 56% 60% 40% / 42% 58% 44% 56%; }
+@keyframes gb2{
+  0%,100%{ transform:translate(0,0) scale(1); }
+  45%{ transform:translate(-200px,-60px) scale(0.9); }
+  75%{ transform:translate(-70px,120px) scale(1.12); }
 }
-@keyframes cyto3{
-  from{ transform:translate3d(0,0,0) scale(1); border-radius:50% 50% 42% 58% / 55% 45% 58% 42%; }
-  to{ transform:translate3d(-6%,9%,0) scale(1.18); border-radius:60% 40% 55% 45% / 45% 55% 42% 58%; }
+@keyframes gb3{
+  0%,100%{ transform:translate(0,0) scale(1); }
+  35%{ transform:translate(140px,-130px) scale(1.18); }
+  68%{ transform:translate(-120px,60px) scale(0.88); }
+}
+@keyframes gb4{
+  0%,100%{ transform:translate(0,0) scale(1); }
+  40%{ transform:translate(150px,110px) scale(1.1); }
+  72%{ transform:translate(40px,-90px) scale(0.9); }
+}
+@keyframes gb5{
+  0%,100%{ transform:translate(0,0) scale(1); }
+  42%{ transform:translate(-130px,-120px) scale(1.16); }
+  74%{ transform:translate(110px,40px) scale(0.9); }
+}
+@keyframes gb6{
+  0%,100%{ transform:translate(0,0) scale(1); }
+  30%{ transform:translate(260px,90px) scale(1.1); }
+  55%{ transform:translate(420px,10px) scale(0.94); }
+  80%{ transform:translate(140px,-60px) scale(1.05); }
+}
+@keyframes gb7{
+  0%,100%{ transform:translate(0,0) scale(1); }
+  36%{ transform:translate(-200px,-90px) scale(1.12); }
+  70%{ transform:translate(120px,-40px) scale(0.92); }
 }
 @keyframes panelIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
 @keyframes synflow{
@@ -305,25 +354,39 @@ main, .foot{ position:relative; z-index:1; }
   -webkit-mask-image:radial-gradient(125% 95% at 50% 0%, #000 28%, rgba(0,0,0,0.3) 100%);
   mask-image:radial-gradient(125% 95% at 50% 0%, #000 28%, rgba(0,0,0,0.3) 100%);
 }
-/* 細胞質ブロブ：緩やかに形を変えながら漂う（aria-hidden・装飾のみ） */
-.cyto{ position:absolute; inset:0; overflow:hidden; pointer-events:none; }
-.cyto span{ position:absolute; display:block; }
-.cyto span:nth-child(1){
-  width:46%; padding-top:36%; left:55%; top:-12%;
-  border-radius:52% 48% 61% 39% / 46% 54% 46% 54%;
-  background:radial-gradient(closest-side, rgba(76,102,245,0.22) 0%, rgba(76,102,245,0.07) 55%, transparent 74%);
+/* ---------- 細胞質メタボール .cyto-svg ----------
+   SVGゴーフィルタ（feGaussianBlurでにじませ、feColorMatrixのアルファ閾値で
+   輪郭を再びシャープにする）による生体的ブロブ。7つの円が互いに近づくと
+   融合し、離れると分離する＝細胞が分裂・接合するような有機的な動き。
+   円自体は不透明ソリッド塗り（閾値処理の前提）、最終的な淡さは
+   フィルタ後に効く svg 要素の opacity と mix-blend-mode:screen で作る。
+   アニメーションは no-preference ブロック内のみ＝reduce環境では静止形。 */
+.cyto-svg{
+  position:absolute; inset:0; width:100%; height:100%; display:block;
+  pointer-events:none; mix-blend-mode:screen; opacity:.3;
 }
-.cyto span:nth-child(2){
-  width:36%; padding-top:30%; left:-14%; top:52%;
-  border-radius:58% 42% 45% 55% / 52% 48% 55% 45%;
-  background:radial-gradient(closest-side, rgba(79,216,232,0.12) 0%, rgba(79,216,232,0.04) 55%, transparent 76%);
+.cyto-svg .gb{ transform-box:fill-box; transform-origin:50% 50%; }
+@media (max-width:640px){ .cyto-svg{ opacity:.15; } }
+
+/* ---------- ニューラルパーティクルネットワーク（Canvas 2D・JS駆動） ----------
+   描画内容はすべて portfolio_app.js 側。ここでは配置のみ。
+   .world 全体が pointer-events:none だが、canvas 単体でも明示しておく。 */
+.world .neural{
+  position:absolute; inset:0; width:100%; height:100%; display:block;
+  pointer-events:none;
 }
-.cyto span:nth-child(3){
-  width:26%; padding-top:24%; left:26%; top:12%;
-  border-radius:50% 50% 42% 58% / 55% 45% 58% 42%;
-  background:radial-gradient(closest-side, rgba(157,140,255,0.11) 0%, rgba(157,140,255,0.04) 55%, transparent 76%);
+
+/* 可読性スクリム：本文カラムの背後だけパーティクル・ブロブの輝度を落とす
+   半透明ヴィネット（.world の最上層＝canvasの上・コンテンツの下） */
+.world::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(56% 46% at 50% 36%, rgba(5,7,12,0.42) 0%, transparent 100%),
+    linear-gradient(180deg, rgba(5,7,12,0.05) 0%, rgba(5,7,12,0.3) 100%);
 }
-/* モバイルは簡略化：細分グリッドを落とし、ブロブは静止・1枚減らす（負荷対策） */
+
+/* モバイルは簡略化：細分グリッドを落とす（負荷対策。ブロブ静止は
+   no-preferenceブロック側の max-width ガードで制御） */
 @media (max-width:640px){
   .world-grid{
     background-image:
@@ -331,8 +394,6 @@ main, .foot{ position:relative; z-index:1; }
       linear-gradient(90deg, rgba(79,216,232,0.05) 1px, transparent 1px);
     background-size:60px 60px, 60px 60px;
   }
-  .cyto span{ animation:none !important; }
-  .cyto span:nth-child(3){ display:none; }
 }
 
 /* ビュー遷移オーバーレイ（JS生成・装飾のみ・クリック不可）。
@@ -653,18 +714,9 @@ html:not(.js) .crumbs{ display:none; }
 .stage{ position:relative; }
 .stage-panel{ scroll-margin-top:5.5rem; }
 
-/* ---------- grid-net：カードグリッド同士を結ぶシナプス結線（装飾のみ） ----------
-   viewBox 0 0 100 100 を preserveAspectRatio:none でグリッド全域に引き伸ばす。
-   カード（--cell面・不透明）が上に載るため、結線・ノードはガター部分にだけ現れる。
-   カード高さが変わっても破綻しない。1カラム収束時（<=680px）は非表示。 */
-.cap-grid, .work-grid{ position:relative; }
-.cap-grid > .cap-card{ position:relative; z-index:1; }
-.work-grid > .doc-card{ z-index:1; }
-.grid-net{ position:absolute; inset:0; width:100%; height:100%; z-index:0; }
-.grid-net .syn-line{ stroke:rgba(79,216,232,0.22); }
-.grid-net .gd1{ offset-path:path("M25 17 C50 17 50 50 75 50"); }
-.grid-net .gd2{ offset-path:path("M75 50 C50 50 50 83 25 83"); }
-@media (max-width:680px){ .grid-net{ display:none; } }
+/* v7: 旧 .grid-net（02/03グリッドの静的SVG結線）は撤去。
+   カードグリッドのガターには、全画面のニューラルネットワーク（.world .neural）が
+   そのまま透けて見えるため、静的な結線は不要になった。 */
 
 /* ---------- L字コーナーマーカーの全体展開（nav-cardと同じ設計思想・装飾のみ） ---------- */
 .cap-card, .define, .cap-extra, .contact-form{ position:relative; }
@@ -943,17 +995,40 @@ html:not(.js) .crumbs{ display:none; }
 }
 
 .foot{ max-width:900px; margin:0 auto; padding:2.4rem clamp(1.1rem,4vw,2rem) 3rem; border-top:1px solid var(--line); margin-top:3rem; font-size:0.76rem; color:var(--ink-soft); display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
-
 </style>
 
 <a class="skip" href="#main">本文へスキップ</a>
 
-<!-- 全ビュー共通の固定背景レイヤー：Synapse Blueprintの世界（電場グロー＋方眼＋細胞質ブロブ）。
+<!-- 全ビュー共通の固定背景レイヤー：Synapse Blueprintの世界。
+     電場グロー＋方眼（静的下地）／細胞質メタボール（SVGゴーフィルタ）／
+     ニューラルパーティクルネットワーク（Canvas 2D・JS駆動）の3層構成。
      position:fixed でどのビュー・どのスクロール位置でも同じ世界が続く。装飾のみ。 -->
 <div class="world" aria-hidden="true">
   <div class="world-glow"></div>
   <div class="world-grid"></div>
-  <div class="cyto"><span></span><span></span><span></span></div>
+  <!-- 細胞質メタボール：feGaussianBlur＋feColorMatrixのアルファ閾値（ゴーフィルタ）で
+       複数の円が近づくと融合・離れると分離する。円はソリッド塗り（閾値処理の前提）、
+       淡さはCSS側の opacity / mix-blend-mode で調整。動きはCSSアニメーション（reduce環境では静止） -->
+  <svg class="cyto-svg" viewBox="0 0 1200 800" preserveAspectRatio="none" focusable="false">
+    <defs>
+      <filter id="goo" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="22" result="b"/>
+        <feColorMatrix in="b" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9"/>
+      </filter>
+    </defs>
+    <g filter="url(#goo)">
+      <circle class="gb gb1" cx="880" cy="150" r="150" fill="#6C7CFF"/>
+      <circle class="gb gb2" cx="1030" cy="260" r="105" fill="#6C7CFF"/>
+      <circle class="gb gb3" cx="760" cy="310" r="85" fill="#4FD8E8"/>
+      <circle class="gb gb4" cx="170" cy="520" r="130" fill="#4FD8E8"/>
+      <circle class="gb gb5" cx="330" cy="640" r="95" fill="#4FD8E8"/>
+      <circle class="gb gb6" cx="410" cy="140" r="82" fill="#9D8CFF"/>
+      <circle class="gb gb7" cx="620" cy="690" r="100" fill="#6C7CFF"/>
+    </g>
+  </svg>
+  <!-- ニューラルパーティクルネットワーク：描画はJS（portfolio_app.js）。
+       JS無効環境では単に空のcanvas＝静的下地のみが残る -->
+  <canvas class="neural"></canvas>
 </div>
 
 <svg class="icon-defs" aria-hidden="true">
@@ -1127,19 +1202,7 @@ html:not(.js) .crumbs{ display:none; }
         <p class="sec-lede">広告代理店・サイト制作・SNS運用と分断されがちな領域を、チャネル横断で一気通貫に実行できることが強みです。「何からやるべきか」の整理から数値を見た次の一手まで、判断と実行を同時に任せられます。カードを選ぶと、その領域を裏付ける実績まで潜れます。</p>
 
         <div class="cap-grid">
-          <!-- カード間を結ぶシナプス結線（装飾のみ。カードが不透明なのでガター部分にだけ現れる） -->
-          <svg class="grid-net" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-            <path class="syn-line" d="M50 2 L50 98"/>
-            <path class="syn-line" d="M25 17 C50 17 50 50 75 50"/>
-            <path class="syn-line" d="M75 17 C50 17 50 50 25 50"/>
-            <path class="syn-line" d="M25 50 C50 50 50 83 75 83"/>
-            <path class="syn-line" d="M75 50 C50 50 50 83 25 83"/>
-            <circle class="syn-node" cx="50" cy="33.5" r="0.55"/>
-            <circle class="syn-node" cx="50" cy="66.5" r="0.55"/>
-            <circle class="syn-dot gd1" r="0.5"/>
-            <circle class="syn-dot gd2" r="0.5"/>
-          </svg>
-
+          <!-- v7: 静的な結線SVGは撤去。ガターには全画面の生成的ネットワークが透けて見える -->
           <button type="button" class="cap-card" data-open-cap="strategy">
             <span class="cap-no">C-01</span>
             <span class="cap-title">マーケティング戦略設計</span>
@@ -1343,19 +1406,7 @@ html:not(.js) .crumbs{ display:none; }
         </div>
 
         <div class="work-grid">
-          <!-- カード間を結ぶシナプス結線（装飾のみ。カードが不透明なのでガター部分にだけ現れる） -->
-          <svg class="grid-net" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-            <path class="syn-line" d="M50 2 L50 98"/>
-            <path class="syn-line" d="M25 17 C50 17 50 50 75 50"/>
-            <path class="syn-line" d="M75 17 C50 17 50 50 25 50"/>
-            <path class="syn-line" d="M25 50 C50 50 50 83 75 83"/>
-            <path class="syn-line" d="M75 50 C50 50 50 83 25 83"/>
-            <circle class="syn-node" cx="50" cy="33.5" r="0.55"/>
-            <circle class="syn-node" cx="50" cy="66.5" r="0.55"/>
-            <circle class="syn-dot gd1" r="0.5"/>
-            <circle class="syn-dot gd2" r="0.5"/>
-          </svg>
-
+          <!-- v7: 静的な結線SVGは撤去。ガターには全画面の生成的ネットワークが透けて見える -->
           <button type="button" class="doc-card" data-open-work="meme">
             <div class="thumb thumb-graphic tone-c1"><svg class="ic" aria-hidden="true"><use href="#ic-meme"></use></svg></div>
             <div class="body">
@@ -1854,11 +1905,20 @@ html:not(.js) .crumbs{ display:none; }
        opts.silent    : スクロール・フォーカス・アニメーションを行わない
                         （直後に下位階層側で行う場合／初期表示）
        opts.noFocus   : スクロールのみ行い、フォーカス移動はしない（ハッシュ復元時） */
+    /* 背景のニューラルネットワーク（下部の独立モジュール）へ現在ビューを通知。
+       ホーム＝高密度モード／その他＝低密度モードの切り替えに使う。装飾連携のみ */
+    function announceView(name) {
+      try {
+        document.dispatchEvent(new CustomEvent('portfolio:view', { detail: name }));
+      } catch (e) { /* CustomEvent非対応環境では何もしない（背景は既定密度のまま） */ }
+    }
+
     function showView(name, opts) {
       opts = opts || {};
       var target = views[name];
       if (!target) return;
       Object.keys(views).forEach(function (k) { views[k].hidden = (k !== name); });
+      announceView(name);
       if (name === 'capability' && !opts.keepStage) resetCapStage();
       if (name === 'works' && !opts.keepStage) resetWorksStage();
       revealWithin(target);
@@ -2008,6 +2068,7 @@ html:not(.js) .crumbs{ display:none; }
     resetCapStage();
     resetWorksStage();
     Object.keys(views).forEach(function (k) { views[k].hidden = (k !== 'home'); });
+    announceView('home');
 
     /* ---------- 階層遷移トランジション：クリック地点からシナプス光が広がる ----------
        装飾のみ（.warp は pointer-events:none / aria-hidden）。既存の遷移ロジックには
@@ -2066,4 +2127,421 @@ html:not(.js) .crumbs{ display:none; }
   });
 })();
 
+/* =====================================================
+   Neural Particle Network — 全ビュー共通の生成的背景
+   （Canvas 2D／vanilla JS／外部ライブラリなし）
+   - 疑似バリューノイズのフローフィールドで有機的にドリフトする
+     ノード（ニューロン）群
+   - 近接ノード同士を距離減衰アルファの接続線で結ぶ
+   - 接続線上を明るい光点（シナプスパルス）が走り、到達点で発火
+     （フラッシュ＋確率的に次のパルスへ連鎖）
+   - カーソル／タッチ位置に緩やかな引力＋一時的な接続線
+     （canvas自体は pointer-events:none。座標は window のイベントで拾う）
+   - ホームビュー＝高密度／その他ビュー＝粒子数・輝度を自動減衰
+     （ナビ側が dispatch する portfolio:view カスタムイベントに連動）
+   - visibilitychange / IntersectionObserver でループを停止
+   - prefers-reduced-motion: reduce ではループを起動せず静止1フレームのみ
+   装飾のみ（.world は aria-hidden）。本文の操作・可読性には干渉しない。
+   ===================================================== */
+(function () {
+  'use strict';
+  var canvas = document.querySelector('.world .neural');
+  if (!canvas || !canvas.getContext) return;
+  var ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var TAU = Math.PI * 2;
+  var W = 0, H = 0;
+  var linkDist = 130;          /* 接続線を張る最大距離（画面サイズで再計算） */
+  var particles = [];
+  var pulses = [];             /* 接続線上を走る光点 */
+  var flashes = [];            /* パルス到達点の発火フラッシュ */
+  var mode = 'hero';           /* 'hero'（ホーム）＝高密度 / 'calm'（他ビュー）＝低密度 */
+  var dim = 1, dimTarget = 1;  /* モード別の全体輝度（滑らかに補間） */
+  var clock = 0;               /* 累積時間ms（フローフィールドの時間軸） */
+  var nextPulseIn = 600;       /* 次のパルス自然発生までの残りms */
+
+  /* パレット＝デザイントークンと同一（--synapse / --axon / --c3） */
+  var PALETTE = [
+    { r: 79,  g: 216, b: 232 },   /* synapse cyan   */
+    { r: 108, g: 124, b: 255 },   /* axon indigo    */
+    { r: 157, g: 140, b: 255 }    /* violet (--c3)  */
+  ];
+  var CORE = ['rgba(139,234,245,0.95)', 'rgba(158,170,255,0.95)', 'rgba(191,178,255,0.95)'];
+  function pickColor() {
+    var t = Math.random();
+    return t < 0.52 ? 0 : (t < 0.84 ? 1 : 2);
+  }
+
+  /* strokeStyle文字列を毎線生成しない：色×アルファ量子化のキャッシュ */
+  var LEVELS = 24;
+  var lineCache = PALETTE.map(function (c) {
+    var arr = [];
+    for (var k = 0; k <= LEVELS; k++) {
+      arr.push('rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + (k / LEVELS).toFixed(3) + ')');
+    }
+    return arr;
+  });
+  function lineStyle(ci, alpha) {
+    var k = Math.round(alpha * LEVELS);
+    if (k < 0) k = 0; else if (k > LEVELS) k = LEVELS;
+    return lineCache[ci][k];
+  }
+
+  /* 発光スプライト：radialGradientをオフスクリーンに一度だけ焼き、
+     以後は drawImage のみ（shadowBlurより桁違いに軽い） */
+  function makeGlow(r, g, b, coreA) {
+    var s = document.createElement('canvas');
+    s.width = s.height = 64;
+    var gg = s.getContext('2d');
+    var grad = gg.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',' + coreA + ')');
+    grad.addColorStop(0.38, 'rgba(' + r + ',' + g + ',' + b + ',' + (coreA * 0.3).toFixed(3) + ')');
+    grad.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+    gg.fillStyle = grad;
+    gg.fillRect(0, 0, 64, 64);
+    return s;
+  }
+  var glows = PALETTE.map(function (c) { return makeGlow(c.r, c.g, c.b, 0.6); });
+  var pulseGlow = makeGlow(205, 246, 252, 0.95);  /* パルス・カーソル用の白熱シアン */
+
+  /* ---------- 疑似バリューノイズ（自作・2D）。滑らかな流れ場を作る ---------- */
+  function hash2(ix, iy) {
+    var n = Math.sin(ix * 127.1 + iy * 311.7) * 43758.5453123;
+    return n - Math.floor(n);
+  }
+  function noise2(x, y) {
+    var ix = Math.floor(x), iy = Math.floor(y);
+    var fx = x - ix, fy = y - iy;
+    var ux = fx * fx * (3 - 2 * fx);
+    var uy = fy * fy * (3 - 2 * fy);
+    var a = hash2(ix, iy), b = hash2(ix + 1, iy);
+    var c = hash2(ix, iy + 1), d = hash2(ix + 1, iy + 1);
+    return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+  }
+
+  /* ---------- パーティクル ---------- */
+  function makeParticle() {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      r: 1.1 + Math.random() * 1.4,
+      ci: pickColor(),
+      seed: Math.random() * 100,
+      a: 0   /* 出現フェードイン用の個体アルファ */
+    };
+  }
+  function targetCount() {
+    var base = Math.round((W * H) / 12500);       /* 1440x900 ≈ 104個 / 390x844 ≈ 26個 */
+    if (base < 30) base = 30;
+    if (base > 108) base = 108;
+    if (W < 700) base = Math.min(base, 44);       /* モバイル上限 */
+    return mode === 'hero' ? base : Math.round(base * 0.55);
+  }
+  function maxPulses() {
+    if (mode === 'hero') return W < 700 ? 3 : 7;
+    return W < 700 ? 2 : 4;
+  }
+
+  /* ---------- カーソル（Neural Interface） ---------- */
+  var mouse = { x: -9999, y: -9999, t: -1e9 };
+  var mAl = 0;  /* カーソル効果の強度（最後の移動から2.6秒で減衰） */
+  function trackPoint(x, y) {
+    mouse.x = x; mouse.y = y; mouse.t = performance.now();
+  }
+  addEventListener('mousemove', function (e) { trackPoint(e.clientX, e.clientY); }, { passive: true });
+  addEventListener('touchstart', function (e) {
+    if (e.touches && e.touches[0]) trackPoint(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches[0]) trackPoint(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+
+  /* ---------- シナプスパルス ---------- */
+  function spawnPulse(from) {
+    var a = from || particles[(Math.random() * particles.length) | 0];
+    if (!a) return;
+    /* 現在つながっている（=接続線が引かれている）相手からランダムに行き先を選ぶ */
+    var cands = [];
+    var ld2 = linkDist * linkDist;
+    for (var j = 0; j < particles.length; j++) {
+      var b = particles[j];
+      if (b === a) continue;
+      var dx = a.x - b.x, dy = a.y - b.y;
+      if (dx * dx + dy * dy < ld2) cands.push(b);
+    }
+    if (!cands.length) return;
+    pulses.push({
+      a: a,
+      b: cands[(Math.random() * cands.length) | 0],
+      t: 0,
+      dur: 460 + Math.random() * 420
+    });
+  }
+
+  /* ---------- 更新 ---------- */
+  var FLOW = 0.0011;  /* フローフィールドの空間スケール */
+  function update(dt) {
+    clock += dt;
+    var dtf = dt / 16.7;  /* 60fps基準の時間係数 */
+    var tn = clock * 0.000045;
+
+    /* 個体数はターゲットへ毎フレーム1個ずつ滑らかに増減 */
+    var want = targetCount();
+    for (var add = 0; add < 3 && particles.length < want; add++) particles.push(makeParticle());
+    if (particles.length > want) particles.pop();
+
+    dim += (dimTarget - dim) * Math.min(1, 0.05 * dtf);
+
+    /* カーソル強度の減衰 */
+    var mTarget = (performance.now() - mouse.t < 2600) ? 1 : 0;
+    mAl += (mTarget - mAl) * Math.min(1, 0.07 * dtf);
+
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      p.a += (1 - p.a) * Math.min(1, 0.035 * dtf);
+
+      /* ノイズ場の角度に沿って加速（緩急のある有機的ドリフト） */
+      var ang = noise2(p.x * FLOW + p.seed, p.y * FLOW + tn) * TAU * 2;
+      p.vx += Math.cos(ang) * 0.016 * dtf;
+      p.vy += Math.sin(ang) * 0.016 * dtf;
+
+      /* カーソル近傍：緩い引力（至近距離では軽い反発で潰れを防ぐ） */
+      if (mAl > 0.02) {
+        var mdx = mouse.x - p.x, mdy = mouse.y - p.y;
+        var md = Math.sqrt(mdx * mdx + mdy * mdy) || 1;
+        if (md < 190) {
+          var f = (md < 46 ? -0.03 : (1 - md / 190) * 0.05) * mAl * dtf;
+          p.vx += (mdx / md) * f;
+          p.vy += (mdy / md) * f;
+        }
+      }
+
+      /* 減衰＋速度上限（弾け飛び防止） */
+      p.vx *= 0.982; p.vy *= 0.982;
+      var sp = p.vx * p.vx + p.vy * p.vy;
+      if (sp > 2.9) { sp = Math.sqrt(sp); p.vx = p.vx / sp * 1.7; p.vy = p.vy / sp * 1.7; }
+
+      p.x += p.vx * dtf;
+      p.y += p.vy * dtf;
+
+      /* 画面端はマージン付きラップ（接続距離より広い余白なので端で線は飛ばない） */
+      if (p.x < -40) p.x = W + 38; else if (p.x > W + 40) p.x = -38;
+      if (p.y < -40) p.y = H + 38; else if (p.y > H + 40) p.y = -38;
+    }
+
+    /* パルスの自然発生 */
+    nextPulseIn -= dt;
+    if (nextPulseIn <= 0) {
+      if (pulses.length < maxPulses()) spawnPulse(null);
+      nextPulseIn = 240 + Math.random() * 620;
+    }
+    /* パルス進行＋到達処理（発火フラッシュ＋確率的な連鎖） */
+    for (i = pulses.length - 1; i >= 0; i--) {
+      var pl = pulses[i];
+      pl.t += dt;
+      if (pl.t >= pl.dur) {
+        flashes.push({ x: pl.b.x, y: pl.b.y, ci: pl.b.ci, t: 0 });
+        var chain = pl.b;
+        pulses.splice(i, 1);
+        if (Math.random() < 0.55 && pulses.length < maxPulses()) spawnPulse(chain);
+      }
+    }
+    for (i = flashes.length - 1; i >= 0; i--) {
+      flashes[i].t += dt;
+      if (flashes[i].t > 430) flashes.splice(i, 1);
+    }
+  }
+
+  /* ---------- 描画 ---------- */
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    var n = particles.length;
+    var ld2 = linkDist * linkDist;
+    var i, j, p, q, dx, dy, d2, d, alpha;
+
+    /* 接続線（コンステレーション） */
+    ctx.lineWidth = 1;
+    for (i = 0; i < n; i++) {
+      p = particles[i];
+      for (j = i + 1; j < n; j++) {
+        q = particles[j];
+        dx = p.x - q.x; dy = p.y - q.y;
+        d2 = dx * dx + dy * dy;
+        if (d2 > ld2) continue;
+        d = Math.sqrt(d2);
+        alpha = (1 - d / linkDist) * 0.55 * dim * (p.a < q.a ? p.a : q.a);
+        if (alpha < 0.02) continue;
+        ctx.strokeStyle = lineStyle(p.ci, alpha);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(q.x, q.y);
+        ctx.stroke();
+      }
+    }
+
+    /* カーソルからの一時接続線＋カーソル光点 */
+    var mA = mAl * dim;
+    if (mA > 0.02) {
+      for (i = 0; i < n; i++) {
+        p = particles[i];
+        dx = p.x - mouse.x; dy = p.y - mouse.y;
+        d2 = dx * dx + dy * dy;
+        if (d2 > 160 * 160) continue;
+        d = Math.sqrt(d2);
+        alpha = (1 - d / 160) * 0.5 * mA * p.a;
+        if (alpha < 0.02) continue;
+        ctx.strokeStyle = lineStyle(0, alpha);
+        ctx.beginPath();
+        ctx.moveTo(mouse.x, mouse.y);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = mA * 0.85;
+      ctx.drawImage(pulseGlow, mouse.x - 15, mouse.y - 15, 30, 30);
+      ctx.globalAlpha = 1;
+    }
+
+    /* ノード（グロー＋コア） */
+    for (i = 0; i < n; i++) {
+      p = particles[i];
+      var ga = dim * p.a;
+      var gs = p.r * 10;
+      ctx.globalAlpha = ga * 0.8;
+      ctx.drawImage(glows[p.ci], p.x - gs / 2, p.y - gs / 2, gs, gs);
+      ctx.globalAlpha = ga;
+      ctx.fillStyle = CORE[p.ci];
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, TAU);
+      ctx.fill();
+    }
+
+    /* シナプスパルス：接続線を強調しつつ光点が走る */
+    for (i = 0; i < pulses.length; i++) {
+      var pl = pulses[i];
+      var k = pl.t / pl.dur;
+      var e = k * k * (3 - 2 * k);          /* smoothstep */
+      var fade = Math.sin(k * Math.PI);      /* 出入りでフェード */
+      var x = pl.a.x + (pl.b.x - pl.a.x) * e;
+      var y = pl.a.y + (pl.b.y - pl.a.y) * e;
+      ctx.strokeStyle = lineStyle(pl.b.ci, 0.4 * fade * dim);
+      ctx.beginPath();
+      ctx.moveTo(pl.a.x, pl.a.y);
+      ctx.lineTo(pl.b.x, pl.b.y);
+      ctx.stroke();
+      ctx.globalAlpha = fade * dim;
+      ctx.drawImage(pulseGlow, x - 10, y - 10, 20, 20);
+      ctx.globalAlpha = 1;
+    }
+
+    /* 発火フラッシュ：到達点から広がるリング */
+    for (i = 0; i < flashes.length; i++) {
+      var fl = flashes[i];
+      var fk = fl.t / 430;
+      var rr = 3 + fk * 20;
+      var fa = (1 - fk) * 0.65 * dim;
+      ctx.globalAlpha = fa;
+      ctx.drawImage(pulseGlow, fl.x - 13, fl.y - 13, 26, 26);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = lineStyle(fl.ci, fa);
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(fl.x, fl.y, rr, 0, TAU);
+      ctx.stroke();
+      ctx.lineWidth = 1;
+    }
+  }
+
+  /* ---------- reduce環境用：静止1フレーム（ノード＋接続線のみ・完全には消さない） ---------- */
+  function staticFrame() {
+    var want = targetCount();
+    while (particles.length < want) {
+      var p = makeParticle();
+      p.a = 1;
+      particles.push(p);
+    }
+    particles.length = want;
+    pulses.length = 0;
+    flashes.length = 0;
+    dim = 0.85;
+    mAl = 0;
+    draw();
+  }
+
+  /* ---------- サイズ・解像度（devicePixelRatioは過剰に上げない） ---------- */
+  function resize() {
+    W = innerWidth; H = innerHeight;
+    var dpr = Math.min(window.devicePixelRatio || 1, W < 700 ? 1.5 : 1.75);
+    canvas.width = Math.max(1, Math.round(W * dpr));
+    canvas.height = Math.max(1, Math.round(H * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    linkDist = Math.max(96, Math.min(150, Math.sqrt(W * H) / 7));
+    if (reduced) staticFrame();
+  }
+  addEventListener('resize', resize);
+
+  /* ---------- ループ制御：非表示タブ・画面外では止める ---------- */
+  var running = false, rafId = 0, prevT = 0;
+  var visible = (document.visibilityState !== 'hidden');
+  var inView = true;
+  function frame(t) {
+    var dt = t - prevT;
+    prevT = t;
+    if (dt > 50) dt = 50;      /* タブ復帰直後などの巨大デルタを抑制 */
+    if (dt < 0) dt = 16.7;
+    update(dt);
+    draw();
+    rafId = requestAnimationFrame(frame);
+  }
+  function syncLoop() {
+    var should = !reduced && visible && inView;
+    if (should && !running) {
+      running = true;
+      prevT = performance.now();
+      rafId = requestAnimationFrame(frame);
+    } else if (!should && running) {
+      running = false;
+      cancelAnimationFrame(rafId);
+    }
+  }
+  document.addEventListener('visibilitychange', function () {
+    visible = (document.visibilityState !== 'hidden');
+    syncLoop();
+  });
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (entries) {
+      inView = entries[0].isIntersecting;
+      syncLoop();
+    }).observe(canvas);
+  }
+
+  /* ---------- ビュー切り替え連動（ホーム＝高密度／他＝低密度・低輝度） ---------- */
+  document.addEventListener('portfolio:view', function (e) {
+    mode = (e.detail === 'home') ? 'hero' : 'calm';
+    dimTarget = (mode === 'hero') ? 1 : 0.62;
+    if (reduced) staticFrame();
+  });
+
+  /* ---------- 起動 ----------
+     初回表示から完成したネットワークを見せるためのウォームスタート：
+     ターゲット数まで一括生成（フェードイン済み）→ 数十フレームぶん空回しして
+     速度場・パルスを定常状態にしてからループ開始 */
+  function warmStart() {
+    var want = targetCount();
+    while (particles.length < want) {
+      var p = makeParticle();
+      p.a = 1;
+      particles.push(p);
+    }
+    for (var k = 0; k < 36; k++) update(16.7);
+  }
+  resize();
+  if (!reduced) {
+    warmStart();
+    syncLoop();
+  }
+})();
 </script>
