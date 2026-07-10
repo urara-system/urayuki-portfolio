@@ -62,6 +62,20 @@
      には全画面の生成的ネットワークがそのまま透けて見える。
    - 可読性担保：.world::after に本文カラム中心の暗色スクリム（半透明の
      ヴィネット）を常設し、テキスト背後のパーティクル輝度を抑える。
+
+   v8 変更点（背景グラフィックのWebGL化・構造/機能/文言は不変）:
+   - 生成的背景を生WebGL1＋手書きGLSL（外部ライブラリなし）の .glstage に
+     全面刷新。①細胞質メタボール＝フラグメントシェーダーのSDF（smin合成）
+     ＋バリューノイズの粒状質感、②接続線＝太さ・端タパー・発光コアを持つ
+     クワッドジオメトリ、③ノード/塵/パルス/発火リング＝加算合成の
+     グローポイントスプライト（gl_PointCoordの放射減衰）。
+     粒子は z 深度を持ち、サイズ・輝度・パララックスで奥行きを表現。
+   - WebGL初期化・シェーダーコンパイルに失敗した環境では、v7実装
+     （.neural＝Canvas 2D版ネットワーク＋.cyto-svg＝SVGゴーフィルタ）へ
+     自動フォールバック。WebGL稼働時のみ html.webgl が付与され、
+     このクラスで .neural / .cyto-svg を非表示化する。
+   - reduce環境では描画ループを起動せず静止1フレームのみ（従来方針を踏襲）。
+     可読性スクリム .world::after・低opacity方針は不変。
    ============================================================= */
 
 :root{
@@ -154,9 +168,16 @@ button{
    隠し状態・トランジションはすべてこのブロック内。
    reduce環境では常に完成形が見える。 ---------- */
 @media (prefers-reduced-motion: no-preference){
-  html.js .fx{ opacity:0; transform:translateY(16px); transition:opacity .6s ease, transform .6s ease; }
-  html.js .fx.in{ opacity:1; transform:none; }
-  html.js .hero-load > *{ opacity:0; transform:translateY(18px); animation:rise .75s cubic-bezier(.22,.61,.36,1) forwards; }
+  /* 入場リビールは opacity ではなく visibility＋filter:brightness で行う。
+     【重要・再発防止】opacityフェードは要素全体（不透明なはずのカード背景を含む）を
+     合成時に半透明化するため、フェード中は背後の .world（WebGL粒子・接続線・方眼）が
+     カード本文の上に透けて見える（v8のWebGL化で背景輝度が上がり顕在化したバグ）。
+     brightness(0)→1 なら要素は全フレームで完全不透明のまま「暗闇から明るくなる」ので、
+     暗色テーマでは従来と同じフェード感を保ちつつ、透け・重なりが構造的に起きない。
+     visibility はリビール前に黒い板が見えないようにするための切り替え（遷移対象外＝即時）。 */
+  html.js .fx{ visibility:hidden; filter:brightness(0); transform:translateY(16px); transition:filter .6s ease, transform .6s ease; }
+  html.js .fx.in{ visibility:visible; filter:none; transform:none; }
+  html.js .hero-load > *{ visibility:hidden; filter:brightness(0); transform:translateY(18px); animation:rise .75s cubic-bezier(.22,.61,.36,1) forwards; }
   html.js .hero-load > *:nth-child(1){ animation-delay:.05s; }
   html.js .hero-load > *:nth-child(2){ animation-delay:.15s; }
   html.js .hero-load > *:nth-child(3){ animation-delay:.25s; }
@@ -201,7 +222,9 @@ button{
   /* --- 階層ナビゲーションのビュー切り替え（stageパネル／トップレベルビュー共通） --- */
   html.js .panel-anim{ animation:panelIn .4s cubic-bezier(.22,.61,.36,1) both; }
 }
-@keyframes rise{ to{ opacity:1; transform:none; } }
+/* rise/panelIn とも opacity を使わない（上記リビール方針と同じ理由：
+   フェード中に背後のWebGL粒子が本文へ透けるのを構造的に防ぐ） */
+@keyframes rise{ from{ visibility:visible; } to{ visibility:visible; filter:none; transform:none; } }
 @keyframes fielddrift{
   from{ opacity:.85; transform:translate3d(0,0,0) scale(1); }
   to{ opacity:1; transform:translate3d(2%,1.5%,0) scale(1.06); }
@@ -244,7 +267,7 @@ button{
   36%{ transform:translate(-200px,-90px) scale(1.12); }
   70%{ transform:translate(120px,-40px) scale(0.92); }
 }
-@keyframes panelIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+@keyframes panelIn{ from{ filter:brightness(0); transform:translateY(10px); } to{ filter:none; transform:none; } }
 @keyframes synflow{
   0%{ offset-distance:0%; opacity:0; }
   10%{ opacity:1; }
@@ -332,7 +355,11 @@ button{
    どのビューを開いても・どこまでスクロールしても同じ世界が続く。
    装飾のみ（aria-hidden）。コンテンツ側は main/.foot の z-index:1 で常に上。 */
 .world{ position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
-main, .foot{ position:relative; z-index:1; }
+/* transform:translateZ(0) で main を明示的なGPU合成レイヤーに昇格させる。
+   WebGL canvas（.world .glstage）は常に独立した合成レイヤーになるため、
+   通常のDOM要素側もレイヤー昇格させないと、実装によってはcanvasが
+   z-index/DOM順を無視して手前に合成されるブラウザの癖がある（既知の対策）。 */
+main, .foot{ position:relative; z-index:1; transform:translateZ(0); }
 /* ベースの電場グロー（静的な下地。動きは .cyto が担う） */
 .world-glow{
   position:absolute; inset:-25%;
@@ -368,21 +395,31 @@ main, .foot{ position:relative; z-index:1; }
 .cyto-svg .gb{ transform-box:fill-box; transform-origin:50% 50%; }
 @media (max-width:640px){ .cyto-svg{ opacity:.15; } }
 
-/* ---------- ニューラルパーティクルネットワーク（Canvas 2D・JS駆動） ----------
-   描画内容はすべて portfolio_app.js 側。ここでは配置のみ。
+/* ---------- 生成的背景canvas（配置のみ・描画内容はすべて portfolio_app.js 側） ----------
+   .glstage ＝ WebGLステージ（メタボールSDF＋ネットワーク。主描画層）
+   .neural  ＝ Canvas 2D版ネットワーク（WebGL不可環境のフォールバック層）
    .world 全体が pointer-events:none だが、canvas 単体でも明示しておく。 */
-.world .neural{
+.world .neural,
+.world .glstage{
   position:absolute; inset:0; width:100%; height:100%; display:block;
   pointer-events:none;
 }
+/* WebGL版は輝度・密度がCanvas 2D版より格段に高いため、本文との
+   コントラスト確保のためcanvas全体の輝度を落とす（形状・動きは変えない）。 */
+html.webgl .world .glstage{ opacity:0.6; }
+/* WebGL稼働時（JSが html.webgl を付与）：SVGゴーフィルタ版メタボールと
+   Canvas 2D版ネットワークは役目を .glstage に譲って非表示。
+   （CSSアニメーション・フィルタ再描画のコストもまとめて止まる） */
+html.webgl .cyto-svg,
+html.webgl .world .neural{ display:none; }
 
 /* 可読性スクリム：本文カラムの背後だけパーティクル・ブロブの輝度を落とす
    半透明ヴィネット（.world の最上層＝canvasの上・コンテンツの下） */
 .world::after{
   content:""; position:absolute; inset:0; pointer-events:none;
   background:
-    radial-gradient(56% 46% at 50% 36%, rgba(5,7,12,0.42) 0%, transparent 100%),
-    linear-gradient(180deg, rgba(5,7,12,0.05) 0%, rgba(5,7,12,0.3) 100%);
+    radial-gradient(70% 60% at 50% 38%, rgba(5,7,12,0.72) 0%, rgba(5,7,12,0.3) 60%, transparent 100%),
+    linear-gradient(180deg, rgba(5,7,12,0.25) 0%, rgba(5,7,12,0.15) 40%, rgba(5,7,12,0.45) 100%);
 }
 
 /* モバイルは簡略化：細分グリッドを落とす（負荷対策。ブロブ静止は
@@ -510,7 +547,9 @@ main, .foot{ position:relative; z-index:1; }
   position:relative; display:flex; flex-direction:column; min-height:13.5rem; min-width:0;
   padding:1.5rem 1.4rem 1.35rem;
   border:1px solid var(--line); border-radius:12px;
-  background:linear-gradient(160deg, var(--cell-2) 0%, var(--cell) 45%);
+  isolation:isolate;
+  background-color:var(--cell);
+  background-image:linear-gradient(160deg, var(--cell-2) 0%, var(--cell) 45%);
   box-shadow:var(--shadow);
   color:inherit; text-decoration:none;
   transition:border-color .18s ease, transform .18s ease, box-shadow .18s ease;
@@ -744,8 +783,10 @@ html:not(.js) .crumbs{ display:none; }
 @media (max-width:680px){ .cap-grid{ grid-template-columns:1fr; } }
 .cap-card{
   display:flex; flex-direction:column; align-items:stretch; width:100%; min-width:0; text-align:left;
+  position:relative; isolation:isolate;
   border:1px solid var(--line); border-radius:10px;
-  background:linear-gradient(160deg, var(--cell-2) 0%, var(--cell) 45%);
+  background-color:var(--cell);
+  background-image:linear-gradient(160deg, var(--cell-2) 0%, var(--cell) 45%);
   box-shadow:var(--shadow); cursor:pointer;
   padding:1.05rem 1.1rem 1.05rem;
   transition:border-color .18s ease, transform .18s ease, box-shadow .18s ease;
@@ -838,7 +879,9 @@ html:not(.js) .crumbs{ display:none; }
 @media (max-width:680px){ .work-grid{ grid-template-columns:1fr; } }
 .doc-card{
   position:relative; display:flex; flex-direction:column; align-items:stretch; width:100%; min-width:0; text-align:left; overflow:hidden;
-  background:linear-gradient(160deg, var(--cell-2) 0%, var(--cell) 45%);
+  isolation:isolate;
+  background-color:var(--cell);
+  background-image:linear-gradient(160deg, var(--cell-2) 0%, var(--cell) 45%);
   border:1px solid var(--line); border-radius:10px;
   color:inherit; cursor:pointer;
   transition:border-color .18s ease, transform .18s ease, box-shadow .18s ease;
@@ -1000,13 +1043,17 @@ html:not(.js) .crumbs{ display:none; }
 <a class="skip" href="#main">本文へスキップ</a>
 
 <!-- 全ビュー共通の固定背景レイヤー：Synapse Blueprintの世界。
-     電場グロー＋方眼（静的下地）／細胞質メタボール（SVGゴーフィルタ）／
-     ニューラルパーティクルネットワーク（Canvas 2D・JS駆動）の3層構成。
+     電場グロー＋方眼（静的下地）／WebGLステージ .glstage（細胞質メタボールSDF＋
+     ニューラルパーティクルネットワーク。生WebGL1＋GLSL・外部ライブラリなし）。
+     WebGL不可環境では portfolio_app.js が自動フォールバック：
+     .cyto-svg（SVGゴーフィルタのメタボール）＋ .neural（Canvas 2D版ネットワーク）
+     ＝v7実装をそのまま温存。WebGL稼働時は html.webgl でこの2層を非表示化。
      position:fixed でどのビュー・どのスクロール位置でも同じ世界が続く。装飾のみ。 -->
 <div class="world" aria-hidden="true">
   <div class="world-glow"></div>
   <div class="world-grid"></div>
-  <!-- 細胞質メタボール：feGaussianBlur＋feColorMatrixのアルファ閾値（ゴーフィルタ）で
+  <!-- ▼ フォールバック層1：細胞質メタボール（SVGゴーフィルタ）。
+       WebGL稼働時（html.webgl）は非表示。feGaussianBlur＋feColorMatrixのアルファ閾値で
        複数の円が近づくと融合・離れると分離する。円はソリッド塗り（閾値処理の前提）、
        淡さはCSS側の opacity / mix-blend-mode で調整。動きはCSSアニメーション（reduce環境では静止） -->
   <svg class="cyto-svg" viewBox="0 0 1200 800" preserveAspectRatio="none" focusable="false">
@@ -1026,9 +1073,16 @@ html:not(.js) .crumbs{ display:none; }
       <circle class="gb gb7" cx="620" cy="690" r="100" fill="#6C7CFF"/>
     </g>
   </svg>
-  <!-- ニューラルパーティクルネットワーク：描画はJS（portfolio_app.js）。
-       JS無効環境では単に空のcanvas＝静的下地のみが残る -->
-  <canvas class="neural"></canvas>
+  <!-- ▼ フォールバック層2：ニューラルパーティクルネットワーク（Canvas 2D・v7実装）。
+       WebGL不可のときのみ portfolio_app.js がここへ描画する。JS無効環境では
+       単に空のcanvas＝静的下地（グロー＋方眼＋SVGメタボール）のみが残る -->
+  <canvas class="neural" aria-hidden="true"></canvas>
+  <!-- ▼ 主描画層：WebGLステージ（生WebGL1＋手書きGLSL・外部ライブラリなし）。
+       1枚のcanvasに①SDFメタボール（smin合成のフルスクリーンパス）
+       ②接続線（太さ・グラデーション付きクワッド）③加算合成のグローポイント
+       スプライト（ノード・塵・パルス・発火リング）の3パスを重ねる。
+       描画内容はすべて portfolio_app.js 側。装飾のみ -->
+  <canvas class="glstage" aria-hidden="true"></canvas>
 </div>
 
 <svg class="icon-defs" aria-hidden="true">
@@ -2127,421 +2181,1240 @@ html:not(.js) .crumbs{ display:none; }
   });
 })();
 
+
 /* =====================================================
-   Neural Particle Network — 全ビュー共通の生成的背景
-   （Canvas 2D／vanilla JS／外部ライブラリなし）
-   - 疑似バリューノイズのフローフィールドで有機的にドリフトする
-     ノード（ニューロン）群
-   - 近接ノード同士を距離減衰アルファの接続線で結ぶ
-   - 接続線上を明るい光点（シナプスパルス）が走り、到達点で発火
-     （フラッシュ＋確率的に次のパルスへ連鎖）
-   - カーソル／タッチ位置に緩やかな引力＋一時的な接続線
-     （canvas自体は pointer-events:none。座標は window のイベントで拾う）
-   - ホームビュー＝高密度／その他ビュー＝粒子数・輝度を自動減衰
-     （ナビ側が dispatch する portfolio:view カスタムイベントに連動）
-   - visibilitychange / IntersectionObserver でループを停止
+   Generative Background Engine — 全ビュー共通の生成的背景（v8）
+   （生WebGL1＋手書きGLSL／vanilla JS／外部ライブラリなし）
+
+   主描画層：.glstage（WebGL）— 1キャンバスに3パスを加算合成
+     PASS 1  細胞質メタボール：フルスクリーンクワッドのフラグメント
+             シェーダーで複数円のSDFを smin（smooth minimum）合成。
+             輪郭のにじみ・融合/分離が解析的に滑らか。内部には
+             バリューノイズ2オクターブの粒状質感（顕微鏡の細胞質）。
+     PASS 2  接続線：CPUで近傍ペアを求め、太さ付きクワッドを動的生成。
+             端に向かって細くなるタパー＋中心の発光コア＋端点色の
+             グラデーション（シアン→インディゴ）をフラグメントで着色。
+     PASS 3  ポイントスプライト：ノード（ニューロン）・微細な塵・
+             シナプスパルス・発火リングを gl_PointSize＋gl_PointCoord の
+             放射減衰（exp減衰の輝核＋広いハロー）で描画。
+             blendFuncSeparate(SRC_ALPHA, ONE, ZERO, ONE) の加算合成で
+             ページ背景に対して純粋な「発光」として重なる。
+     粒子はz深度（疑似遠近）を持ち、サイズ・輝度・カーソル連動の
+     パララックスで奥行きを表現。粒子総数はデスクトップ約770
+     （ノード約230＋塵約540）、モバイル約200に自動調整。
+
+   フォールバック：WebGLコンテキスト取得失敗／シェーダーのコンパイル・
+     リンク失敗／描画エラー／webglcontextlost のいずれでも、v7実装の
+     Canvas 2D版ネットワーク（.neural）＋SVGゴーフィルタのメタボール
+     （.cyto-svg）へ自動的に切り替わる。WebGL稼働時のみ html.webgl を
+     付与し、CSS側でフォールバック層を非表示化する。
+     さらにCanvas 2Dも使えない環境では、静的下地（.world-glow＋
+     .world-grid＋.cyto-svg）がそのまま残る＝真っ黒事故は起きない。
+
+   共通方針（v7から継承）:
    - prefers-reduced-motion: reduce ではループを起動せず静止1フレームのみ
-   装飾のみ（.world は aria-hidden）。本文の操作・可読性には干渉しない。
+   - visibilitychange / IntersectionObserver でループ停止
+   - devicePixelRatio 上限（モバイル1.5／デスクトップ1.75）
+   - ホーム＝高密度／他ビュー＝低密度・低輝度（portfolio:view連動）
+   - 装飾のみ（.world は aria-hidden・pointer-events:none）
    ===================================================== */
 (function () {
   'use strict';
-  var canvas = document.querySelector('.world .neural');
-  if (!canvas || !canvas.getContext) return;
-  var ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  var docEl = document.documentElement;
   var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
+  var glCanvas = document.querySelector('.world .glstage');
+  var canvas2d = document.querySelector('.world .neural');
   var TAU = Math.PI * 2;
-  var W = 0, H = 0;
-  var linkDist = 130;          /* 接続線を張る最大距離（画面サイズで再計算） */
-  var particles = [];
-  var pulses = [];             /* 接続線上を走る光点 */
-  var flashes = [];            /* パルス到達点の発火フラッシュ */
-  var mode = 'hero';           /* 'hero'（ホーム）＝高密度 / 'calm'（他ビュー）＝低密度 */
-  var dim = 1, dimTarget = 1;  /* モード別の全体輝度（滑らかに補間） */
-  var clock = 0;               /* 累積時間ms（フローフィールドの時間軸） */
-  var nextPulseIn = 600;       /* 次のパルス自然発生までの残りms */
 
-  /* パレット＝デザイントークンと同一（--synapse / --axon / --c3） */
-  var PALETTE = [
-    { r: 79,  g: 216, b: 232 },   /* synapse cyan   */
-    { r: 108, g: 124, b: 255 },   /* axon indigo    */
-    { r: 157, g: 140, b: 255 }    /* violet (--c3)  */
-  ];
-  var CORE = ['rgba(139,234,245,0.95)', 'rgba(158,170,255,0.95)', 'rgba(191,178,255,0.95)'];
-  function pickColor() {
-    var t = Math.random();
-    return t < 0.52 ? 0 : (t < 0.84 ? 1 : 2);
-  }
+  /* ================================================================
+     WebGL版（主実装）
+     ================================================================ */
+  function startWebGL() {
+    if (!glCanvas || !window.WebGLRenderingContext) return false;
+    var gl = null;
+    try {
+      var ctxOpts = {
+        alpha: true, antialias: true, depth: false, stencil: false,
+        premultipliedAlpha: true,        /* 加算合成の結果をそのままページに足す前提 */
+        powerPreference: 'low-power'     /* 背景装飾なので省電力GPUで十分 */
+      };
+      gl = glCanvas.getContext('webgl', ctxOpts) ||
+           glCanvas.getContext('experimental-webgl', ctxOpts);
+    } catch (e) { gl = null; }
+    if (!gl) return false;
 
-  /* strokeStyle文字列を毎線生成しない：色×アルファ量子化のキャッシュ */
-  var LEVELS = 24;
-  var lineCache = PALETTE.map(function (c) {
-    var arr = [];
-    for (var k = 0; k <= LEVELS; k++) {
-      arr.push('rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + (k / LEVELS).toFixed(3) + ')');
+    try {
+      return initGL(gl);
+    } catch (e) {
+      /* シェーダーコンパイル・リンク失敗等：canvasを畳んでフォールバックへ */
+      try { glCanvas.style.display = 'none'; } catch (e2) { /* noop */ }
+      return false;
     }
-    return arr;
-  });
-  function lineStyle(ci, alpha) {
-    var k = Math.round(alpha * LEVELS);
-    if (k < 0) k = 0; else if (k > LEVELS) k = LEVELS;
-    return lineCache[ci][k];
   }
 
-  /* 発光スプライト：radialGradientをオフスクリーンに一度だけ焼き、
-     以後は drawImage のみ（shadowBlurより桁違いに軽い） */
-  function makeGlow(r, g, b, coreA) {
-    var s = document.createElement('canvas');
-    s.width = s.height = 64;
-    var gg = s.getContext('2d');
-    var grad = gg.createRadialGradient(32, 32, 0, 32, 32, 32);
-    grad.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',' + coreA + ')');
-    grad.addColorStop(0.38, 'rgba(' + r + ',' + g + ',' + b + ',' + (coreA * 0.3).toFixed(3) + ')');
-    grad.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
-    gg.fillStyle = grad;
-    gg.fillRect(0, 0, 64, 64);
-    return s;
-  }
-  var glows = PALETTE.map(function (c) { return makeGlow(c.r, c.g, c.b, 0.6); });
-  var pulseGlow = makeGlow(205, 246, 252, 0.95);  /* パルス・カーソル用の白熱シアン */
+  function initGL(gl) {
 
-  /* ---------- 疑似バリューノイズ（自作・2D）。滑らかな流れ場を作る ---------- */
-  function hash2(ix, iy) {
-    var n = Math.sin(ix * 127.1 + iy * 311.7) * 43758.5453123;
-    return n - Math.floor(n);
-  }
-  function noise2(x, y) {
-    var ix = Math.floor(x), iy = Math.floor(y);
-    var fx = x - ix, fy = y - iy;
-    var ux = fx * fx * (3 - 2 * fx);
-    var uy = fy * fy * (3 - 2 * fy);
-    var a = hash2(ix, iy), b = hash2(ix + 1, iy);
-    var c = hash2(ix, iy + 1), d = hash2(ix + 1, iy + 1);
-    return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
-  }
+    /* ---------- GLSLソース（すべてインライン文字列・手書き） ---------- */
 
-  /* ---------- パーティクル ---------- */
-  function makeParticle() {
-    return {
-      x: Math.random() * W,
-      y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.4,
-      vy: (Math.random() - 0.5) * 0.4,
-      r: 1.1 + Math.random() * 1.4,
-      ci: pickColor(),
-      seed: Math.random() * 100,
-      a: 0   /* 出現フェードイン用の個体アルファ */
+    /* 共有：フルスクリーンクワッド用の最小頂点シェーダー */
+    var VS_QUAD = [
+      'attribute vec2 aPos;',
+      'void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }'
+    ].join('\n');
+
+    /* PASS 1：細胞質メタボール（SDF + smin + バリューノイズ）
+       uRes はドローイングバッファのピクセルサイズ（gl_FragCoord系）。
+       uBalls[i] = (x, y, 半径, パレット番号)。座標系は画面中央原点・
+       高さ=1.0 のアスペクト補正済み空間。 */
+    var FS_BALL = [
+      'precision mediump float;',
+      'uniform vec2 uRes;',
+      'uniform float uTime;',
+      'uniform float uAlpha;',
+      'uniform vec4 uBalls[7];',
+      /* パレット＝デザイントークン（--synapse / --axon / --c3） */
+      'const vec3 C0 = vec3(0.310, 0.847, 0.910);',   /* synapse cyan  #4FD8E8 */
+      'const vec3 C1 = vec3(0.424, 0.486, 1.000);',   /* axon indigo   #6C7CFF */
+      'const vec3 C2 = vec3(0.616, 0.549, 1.000);',   /* violet (--c3) #9D8CFF */
+      /* smooth minimum：2つのSDFを滑らかに融合（メタボールの核心） */
+      'float smin(float a, float b, float k){',
+      '  float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);',
+      '  return mix(b, a, h) - k * h * (1.0 - h);',
+      '}',
+      /* 疑似乱数＋バリューノイズ（粒状質感用） */
+      'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }',
+      'float vnoise(vec2 p){',
+      '  vec2 i = floor(p); vec2 f = fract(p);',
+      '  vec2 u = f * f * (3.0 - 2.0 * f);',
+      '  float a = hash(i);',
+      '  float b = hash(i + vec2(1.0, 0.0));',
+      '  float c = hash(i + vec2(0.0, 1.0));',
+      '  float d = hash(i + vec2(1.0, 1.0));',
+      '  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);',
+      '}',
+      'vec3 pal(float ci){ return ci < 0.5 ? C0 : (ci < 1.5 ? C1 : C2); }',
+      'void main(){',
+      '  vec2 p = (gl_FragCoord.xy - 0.5 * uRes) / uRes.y;',
+      '  float d = 1e5;',
+      '  vec3 col = vec3(0.0);',
+      '  float wsum = 1e-4;',
+      '  for (int i = 0; i < 7; i++){',
+      '    vec4 b = uBalls[i];',
+      '    float di = length(p - b.xy) - b.z;',
+      '    d = smin(d, di, 0.17);',                    /* 融合のなめらかさ k=0.17 */
+      '    float w = b.z / (0.03 + abs(di));',         /* 距離重み付きの色ブレンド */
+      '    col += pal(b.w) * w; wsum += w;',
+      '  }',
+      '  col /= wsum;',
+      '  float fill = smoothstep(0.012, -0.05, d);',                 /* 内部 */
+      '  float inner = 1.0 - smoothstep(0.0, 0.26, -d);',            /* 縁ほど明るい膜厚感 */
+      '  float rim = 1.0 - smoothstep(0.0, 0.035, abs(d));',         /* 輪郭ライン */
+      /* 粒状質感：粗いうねり＋ゆっくり流れる微細粒（細胞質のコロイド感） */
+      '  float n = vnoise(p * 9.0 + uTime * 0.05) * 0.6 + vnoise(p * 23.0 - uTime * 0.08) * 0.4;',
+      '  float grain = vnoise(p * 150.0 + uTime * 0.12);',
+      /* 内部にまばらな明点（オルガネラ風） */
+      '  float spec = smoothstep(0.86, 0.98, vnoise(p * 30.0 + uTime * 0.03));',
+      '  float a = fill * (0.055 + 0.11 * inner) * (0.75 + 0.35 * n) * (0.82 + 0.18 * grain)',
+      '          + rim * 0.17 + fill * spec * 0.05;',
+      '  vec3 c = col * (0.8 + 0.28 * n) + vec3(0.45, 0.85, 1.0) * rim * 0.10;',
+      '  gl_FragColor = vec4(c, a * uAlpha);',
+      '}'
+    ].join('\n');
+
+    /* PASS 2：接続線（クワッド）。aEdge = (幅方向-1..1, 線方向0..1) */
+    var VS_LINE = [
+      'attribute vec2 aPos;',
+      'attribute vec3 aCol;',
+      'attribute vec2 aEdge;',
+      'attribute float aAlpha;',
+      'uniform vec2 uRes;',
+      'varying vec3 vCol; varying vec2 vEdge; varying float vA;',
+      'void main(){',
+      '  gl_Position = vec4(aPos.x / uRes.x * 2.0 - 1.0, 1.0 - aPos.y / uRes.y * 2.0, 0.0, 1.0);',
+      '  vCol = aCol; vEdge = aEdge; vA = aAlpha;',
+      '}'
+    ].join('\n');
+    var FS_LINE = [
+      'precision mediump float;',
+      'varying vec3 vCol; varying vec2 vEdge; varying float vA;',
+      'void main(){',
+      '  float c = abs(vEdge.x);',
+      /* 端に向かって細くなるタパー（有効半幅の変調＝太さのブレ） */
+      '  float taper = 0.25 + 0.75 * sin(vEdge.y * 3.14159265);',
+      '  float w = c / max(taper, 0.06);',
+      '  float body = 1.0 - smoothstep(0.30, 1.0, w);',   /* 外周のソフトグロー */
+      '  float core = 1.0 - smoothstep(0.0, 0.42, w);',   /* 中心の発光コア */
+      '  float a = vA * (0.38 * body + 0.78 * core * core);',
+      '  gl_FragColor = vec4(vCol + vec3(0.25) * core * core, a);',
+      '}'
+    ].join('\n');
+
+    /* PASS 3：ポイントスプライト。aRing=0でグロー点、>0でその半径位置のリング */
+    var VS_POINT = [
+      'attribute vec2 aPos;',
+      'attribute float aSize;',
+      'attribute vec4 aCol;',
+      'attribute float aRing;',
+      'uniform vec2 uRes;',
+      'uniform float uDpr;',
+      'varying vec4 vCol; varying float vRing;',
+      'void main(){',
+      '  gl_Position = vec4(aPos.x / uRes.x * 2.0 - 1.0, 1.0 - aPos.y / uRes.y * 2.0, 0.0, 1.0);',
+      '  gl_PointSize = aSize * uDpr;',
+      '  vCol = aCol; vRing = aRing;',
+      '}'
+    ].join('\n');
+    var FS_POINT = [
+      'precision mediump float;',
+      'varying vec4 vCol; varying float vRing;',
+      'void main(){',
+      '  vec2 q = gl_PointCoord - vec2(0.5);',
+      '  float d = length(q) * 2.0;',                       /* 0=中心, 1=スプライト縁 */
+      '  float edge = 1.0 - smoothstep(0.85, 1.0, d);',     /* 正方形の角切り */
+      '  float a; vec3 col = vCol.rgb;',
+      '  if (vRing > 0.001){',
+      '    a = (1.0 - smoothstep(0.0, 0.16, abs(d - vRing))) * edge;',   /* 発火リング */
+      '  } else {',
+      '    float core = exp(-d * d * 12.0);',               /* 中心の輝核 */
+      '    float halo = exp(-d * d * 3.0) * 0.5;',          /* 外側のソフトハロー */
+      '    col = mix(col, vec3(1.0), core * 0.55);',        /* 核は白熱化 */
+      '    a = (core + halo) * edge;',
+      '  }',
+      '  gl_FragColor = vec4(col, vCol.a * a);',
+      '}'
+    ].join('\n');
+
+    /* ---------- コンパイル・リンク（失敗はthrow → 呼び出し側でフォールバック） ---------- */
+    function compile(type, src) {
+      var sh = gl.createShader(type);
+      gl.shaderSource(sh, src);
+      gl.compileShader(sh);
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+        var log = gl.getShaderInfoLog(sh);
+        gl.deleteShader(sh);
+        throw new Error('shader compile: ' + log);
+      }
+      return sh;
+    }
+    function link(vsSrc, fsSrc) {
+      var pr = gl.createProgram();
+      gl.attachShader(pr, compile(gl.VERTEX_SHADER, vsSrc));
+      gl.attachShader(pr, compile(gl.FRAGMENT_SHADER, fsSrc));
+      gl.linkProgram(pr);
+      if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) {
+        throw new Error('program link: ' + gl.getProgramInfoLog(pr));
+      }
+      return pr;
+    }
+
+    var progBall = link(VS_QUAD, FS_BALL);
+    var progLine = link(VS_LINE, FS_LINE);
+    var progPoint = link(VS_POINT, FS_POINT);
+
+    var locBall = {
+      aPos: gl.getAttribLocation(progBall, 'aPos'),
+      uRes: gl.getUniformLocation(progBall, 'uRes'),
+      uTime: gl.getUniformLocation(progBall, 'uTime'),
+      uAlpha: gl.getUniformLocation(progBall, 'uAlpha'),
+      uBalls: gl.getUniformLocation(progBall, 'uBalls')
     };
-  }
-  function targetCount() {
-    var base = Math.round((W * H) / 12500);       /* 1440x900 ≈ 104個 / 390x844 ≈ 26個 */
-    if (base < 30) base = 30;
-    if (base > 108) base = 108;
-    if (W < 700) base = Math.min(base, 44);       /* モバイル上限 */
-    return mode === 'hero' ? base : Math.round(base * 0.55);
-  }
-  function maxPulses() {
-    if (mode === 'hero') return W < 700 ? 3 : 7;
-    return W < 700 ? 2 : 4;
-  }
+    var locLine = {
+      aPos: gl.getAttribLocation(progLine, 'aPos'),
+      aCol: gl.getAttribLocation(progLine, 'aCol'),
+      aEdge: gl.getAttribLocation(progLine, 'aEdge'),
+      aAlpha: gl.getAttribLocation(progLine, 'aAlpha'),
+      uRes: gl.getUniformLocation(progLine, 'uRes')
+    };
+    var locPoint = {
+      aPos: gl.getAttribLocation(progPoint, 'aPos'),
+      aSize: gl.getAttribLocation(progPoint, 'aSize'),
+      aCol: gl.getAttribLocation(progPoint, 'aCol'),
+      aRing: gl.getAttribLocation(progPoint, 'aRing'),
+      uRes: gl.getUniformLocation(progPoint, 'uRes'),
+      uDpr: gl.getUniformLocation(progPoint, 'uDpr')
+    };
 
-  /* ---------- カーソル（Neural Interface） ---------- */
-  var mouse = { x: -9999, y: -9999, t: -1e9 };
-  var mAl = 0;  /* カーソル効果の強度（最後の移動から2.6秒で減衰） */
-  function trackPoint(x, y) {
-    mouse.x = x; mouse.y = y; mouse.t = performance.now();
-  }
-  addEventListener('mousemove', function (e) { trackPoint(e.clientX, e.clientY); }, { passive: true });
-  addEventListener('touchstart', function (e) {
-    if (e.touches && e.touches[0]) trackPoint(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: true });
-  addEventListener('touchmove', function (e) {
-    if (e.touches && e.touches[0]) trackPoint(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: true });
+    /* ---------- バッファ ---------- */
+    var quadBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
 
-  /* ---------- シナプスパルス ---------- */
-  function spawnPulse(from) {
-    var a = from || particles[(Math.random() * particles.length) | 0];
-    if (!a) return;
-    /* 現在つながっている（=接続線が引かれている）相手からランダムに行き先を選ぶ */
-    var cands = [];
-    var ld2 = linkDist * linkDist;
-    for (var j = 0; j < particles.length; j++) {
-      var b = particles[j];
-      if (b === a) continue;
-      var dx = a.x - b.x, dy = a.y - b.y;
-      if (dx * dx + dy * dy < ld2) cands.push(b);
+    /* 動的ジオメトリ（毎フレームCPUで詰め直す）
+       線頂点: pos2 + col3 + edge2 + alpha1 = 8 float（1本=6頂点）
+       点頂点: pos2 + size1 + col4 + ring1  = 8 float */
+    var LINE_CAP = 1400 * 6 * 8;
+    var POINT_CAP = 1600 * 8;
+    var lineF = new Float32Array(LINE_CAP);
+    var pointF = new Float32Array(POINT_CAP);
+    var lineBuf = gl.createBuffer();
+    var pointBuf = gl.createBuffer();
+    var li = 0, pi = 0;   /* 書き込みカーソル（float単位） */
+
+    var maxPointSize = 64;
+    try {
+      var rng = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE);
+      if (rng && rng[1]) maxPointSize = rng[1];
+    } catch (e) { /* 取得できなければ既定値64のまま */ }
+
+    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    /* 加算合成：色は SRC_ALPHA×加算、バッファαは0のまま維持
+       → premultipliedAlpha:true の合成規則で「ページに光を足す」挙動になる */
+    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ZERO, gl.ONE);
+    gl.clearColor(0, 0, 0, 0);
+
+    /* ---------- パレット（デザイントークンと同一） ---------- */
+    var PAL = [
+      [0.310, 0.847, 0.910],   /* synapse cyan   */
+      [0.424, 0.486, 1.000],   /* axon indigo    */
+      [0.616, 0.549, 1.000]    /* violet (--c3)  */
+    ];
+    function pickColor() {
+      var t = Math.random();
+      return t < 0.52 ? 0 : (t < 0.84 ? 1 : 2);
     }
-    if (!cands.length) return;
-    pulses.push({
-      a: a,
-      b: cands[(Math.random() * cands.length) | 0],
-      t: 0,
-      dur: 460 + Math.random() * 420
-    });
-  }
 
-  /* ---------- 更新 ---------- */
-  var FLOW = 0.0011;  /* フローフィールドの空間スケール */
-  function update(dt) {
-    clock += dt;
-    var dtf = dt / 16.7;  /* 60fps基準の時間係数 */
-    var tn = clock * 0.000045;
+    /* ---------- メタボール軌道（v7のSVG円配置・CSS軌道の移植） ----------
+       fx,fy=基準位置（画面比）、r=基準半径（高さ比）、ci=色、
+       ax,ay=楕円軌道の振幅、sx,sy=角速度(rad/s)、p1,p2=位相、
+       sr,pr=半径パルスの角速度・位相 */
+    var BALLS = [
+      { fx: 0.733, fy: 0.19, r: 0.190, ci: 1, ax: 0.14, ay: 0.11, sx: 0.185, sy: 0.146, p1: 0.0, p2: 1.7, sr: 0.11, pr: 0.5 },
+      { fx: 0.858, fy: 0.33, r: 0.131, ci: 1, ax: 0.16, ay: 0.09, sx: 0.242, sy: 0.187, p1: 2.1, p2: 0.4, sr: 0.14, pr: 2.2 },
+      { fx: 0.633, fy: 0.39, r: 0.106, ci: 0, ax: 0.12, ay: 0.13, sx: 0.299, sy: 0.230, p1: 4.0, p2: 2.9, sr: 0.17, pr: 4.1 },
+      { fx: 0.142, fy: 0.65, r: 0.163, ci: 0, ax: 0.13, ay: 0.11, sx: 0.209, sy: 0.164, p1: 1.2, p2: 5.1, sr: 0.12, pr: 1.0 },
+      { fx: 0.275, fy: 0.80, r: 0.119, ci: 0, ax: 0.11, ay: 0.12, sx: 0.262, sy: 0.205, p1: 3.3, p2: 1.5, sr: 0.15, pr: 3.6 },
+      { fx: 0.342, fy: 0.18, r: 0.103, ci: 2, ax: 0.22, ay: 0.08, sx: 0.137, sy: 0.171, p1: 5.4, p2: 3.8, sr: 0.10, pr: 5.0 },
+      { fx: 0.517, fy: 0.86, r: 0.125, ci: 1, ax: 0.15, ay: 0.10, sx: 0.224, sy: 0.178, p1: 0.8, p2: 4.4, sr: 0.13, pr: 2.8 }
+    ];
+    var ballData = new Float32Array(28);
 
-    /* 個体数はターゲットへ毎フレーム1個ずつ滑らかに増減 */
-    var want = targetCount();
-    for (var add = 0; add < 3 && particles.length < want; add++) particles.push(makeParticle());
-    if (particles.length > want) particles.pop();
+    /* ---------- 疑似バリューノイズ（CPU側・フローフィールド用／v7と同じ） ---------- */
+    function hash2(ix, iy) {
+      var n = Math.sin(ix * 127.1 + iy * 311.7) * 43758.5453123;
+      return n - Math.floor(n);
+    }
+    function noise2(x, y) {
+      var ix = Math.floor(x), iy = Math.floor(y);
+      var fx = x - ix, fy = y - iy;
+      var ux = fx * fx * (3 - 2 * fx);
+      var uy = fy * fy * (3 - 2 * fy);
+      var a = hash2(ix, iy), b = hash2(ix + 1, iy);
+      var c = hash2(ix, iy + 1), d = hash2(ix + 1, iy + 1);
+      return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+    }
 
-    dim += (dimTarget - dim) * Math.min(1, 0.05 * dtf);
+    /* ---------- シミュレーション状態 ---------- */
+    var W = 0, H = 0, dpr = 1;
+    var linkDist = 130;
+    var nodes = [];       /* ネットワークノード（接続線を張る主役。前景寄りのz） */
+    var dust = [];        /* 微細な塵（接続なし・背景寄りのz。奥行きと密度感担当） */
+    var pulses = [];      /* 接続線上を走る光点 */
+    var flashes = [];     /* パルス到達点の発火（グロー＋拡大リング） */
+    var mode = 'hero';
+    var dim = 1, dimTarget = 1;
+    var clock = 0;
+    var nextPulseIn = 600;
+    var pmx = 0, pmy = 0;   /* パララックス視点（滑らかに追従） */
 
-    /* カーソル強度の減衰 */
-    var mTarget = (performance.now() - mouse.t < 2600) ? 1 : 0;
-    mAl += (mTarget - mAl) * Math.min(1, 0.07 * dtf);
+    function makeNode() {
+      return {
+        x: Math.random() * W, y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+        z: 0.55 + Math.random() * 0.45,           /* 前景帯 */
+        r: 1.1 + Math.random() * 1.5,
+        ci: pickColor(),
+        seed: Math.random() * 100,
+        a: 0,
+        tws: 0.6 + Math.random() * 1.9,           /* 明滅速度 */
+        ph: Math.random() * TAU,                  /* 明滅位相 */
+        px: 0, py: 0                              /* パララックス適用後の描画座標 */
+      };
+    }
+    function makeDust() {
+      return {
+        x: Math.random() * W, y: Math.random() * H,
+        vx: 0, vy: 0,
+        z: 0.08 + Math.random() * 0.42,           /* 背景帯 */
+        s: 0.5 + Math.random() * 1.0,
+        ci: pickColor(),
+        seed: Math.random() * 100,
+        a: 0,
+        tws: 0.35 + Math.random() * 1.2,
+        ph: Math.random() * TAU
+      };
+    }
+    function nodeTarget() {
+      var b = Math.round((W * H) / 5600);          /* 1440x900 ≈ 231 / 390x844 ≈ 59 */
+      if (b < 56) b = 56;
+      if (b > 240) b = 240;
+      if (W < 700) b = Math.min(b, 88);
+      return mode === 'hero' ? b : Math.round(b * 0.6);
+    }
+    function dustTarget() {
+      var b = Math.round((W * H) / 2400);          /* 1440x900 ≈ 540 / 390x844 ≈ 137 */
+      if (b < 110) b = 110;
+      if (b > 560) b = 560;
+      if (W < 700) b = Math.min(b, 180);
+      return mode === 'hero' ? b : Math.round(b * 0.7);
+    }
+    function maxPulses() {
+      if (mode === 'hero') return W < 700 ? 3 : 7;
+      return W < 700 ? 2 : 4;
+    }
 
-    for (var i = 0; i < particles.length; i++) {
-      var p = particles[i];
-      p.a += (1 - p.a) * Math.min(1, 0.035 * dtf);
+    /* ---------- カーソル（Neural Interface・v7と同じ思想） ---------- */
+    var mouse = { x: -9999, y: -9999, t: -1e9 };
+    var mAl = 0;
+    function trackPoint(x, y) {
+      mouse.x = x; mouse.y = y; mouse.t = performance.now();
+    }
+    addEventListener('mousemove', function (e) { trackPoint(e.clientX, e.clientY); }, { passive: true });
+    addEventListener('touchstart', function (e) {
+      if (e.touches && e.touches[0]) trackPoint(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    addEventListener('touchmove', function (e) {
+      if (e.touches && e.touches[0]) trackPoint(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
 
-      /* ノイズ場の角度に沿って加速（緩急のある有機的ドリフト） */
-      var ang = noise2(p.x * FLOW + p.seed, p.y * FLOW + tn) * TAU * 2;
-      p.vx += Math.cos(ang) * 0.016 * dtf;
-      p.vy += Math.sin(ang) * 0.016 * dtf;
+    /* ---------- シナプスパルス ---------- */
+    function spawnPulse(from) {
+      var a = from || nodes[(Math.random() * nodes.length) | 0];
+      if (!a) return;
+      var cands = [];
+      var ld2 = linkDist * linkDist;
+      for (var j = 0; j < nodes.length; j++) {
+        var b = nodes[j];
+        if (b === a) continue;
+        var dx = a.x - b.x, dy = a.y - b.y;
+        if (dx * dx + dy * dy < ld2) cands.push(b);
+      }
+      if (!cands.length) return;
+      pulses.push({
+        a: a,
+        b: cands[(Math.random() * cands.length) | 0],
+        t: 0,
+        dur: 460 + Math.random() * 420
+      });
+    }
 
-      /* カーソル近傍：緩い引力（至近距離では軽い反発で潰れを防ぐ） */
-      if (mAl > 0.02) {
-        var mdx = mouse.x - p.x, mdy = mouse.y - p.y;
-        var md = Math.sqrt(mdx * mdx + mdy * mdy) || 1;
-        if (md < 190) {
-          var f = (md < 46 ? -0.03 : (1 - md / 190) * 0.05) * mAl * dtf;
-          p.vx += (mdx / md) * f;
-          p.vy += (mdy / md) * f;
+    /* ---------- 更新 ---------- */
+    var FLOW = 0.0011;
+    function update(dt) {
+      clock += dt;
+      var dtf = dt / 16.7;
+      var tn = clock * 0.000045;
+      var i, p;
+
+      /* 個体数はターゲットへ毎フレーム数個ずつ滑らかに増減 */
+      var wantN = nodeTarget();
+      for (var add = 0; add < 3 && nodes.length < wantN; add++) nodes.push(makeNode());
+      if (nodes.length > wantN) nodes.pop();
+      var wantD = dustTarget();
+      for (add = 0; add < 6 && dust.length < wantD; add++) dust.push(makeDust());
+      if (dust.length > wantD) dust.pop();
+
+      dim += (dimTarget - dim) * Math.min(1, 0.05 * dtf);
+
+      /* カーソル強度の減衰（最後の移動から2.6秒） */
+      var mTarget = (performance.now() - mouse.t < 2600) ? 1 : 0;
+      mAl += (mTarget - mAl) * Math.min(1, 0.07 * dtf);
+
+      /* パララックス視点：カーソルがあれば追従、なければ自律的にゆっくり漂う */
+      var txm = Math.sin(clock * 0.00006) * 0.35;
+      var tym = Math.cos(clock * 0.000047) * 0.3;
+      if (mAl > 0.05 && mouse.x > -999) {
+        txm = txm * (1 - mAl) + ((mouse.x / W) * 2 - 1) * mAl;
+        tym = tym * (1 - mAl) + ((mouse.y / H) * 2 - 1) * mAl;
+      }
+      pmx += (txm - pmx) * Math.min(1, 0.028 * dtf);
+      pmy += (tym - pmy) * Math.min(1, 0.028 * dtf);
+
+      /* ノード：ノイズ場ドリフト＋カーソル引力（v7と同じ力学） */
+      for (i = 0; i < nodes.length; i++) {
+        p = nodes[i];
+        p.a += (1 - p.a) * Math.min(1, 0.035 * dtf);
+        var ang = noise2(p.x * FLOW + p.seed, p.y * FLOW + tn) * TAU * 2;
+        p.vx += Math.cos(ang) * 0.016 * dtf;
+        p.vy += Math.sin(ang) * 0.016 * dtf;
+        if (mAl > 0.02) {
+          var mdx = mouse.x - p.x, mdy = mouse.y - p.y;
+          var md = Math.sqrt(mdx * mdx + mdy * mdy) || 1;
+          if (md < 190) {
+            var f = (md < 46 ? -0.03 : (1 - md / 190) * 0.05) * mAl * dtf;
+            p.vx += (mdx / md) * f;
+            p.vy += (mdy / md) * f;
+          }
+        }
+        p.vx *= 0.982; p.vy *= 0.982;
+        var sp = p.vx * p.vx + p.vy * p.vy;
+        if (sp > 2.9) { sp = Math.sqrt(sp); p.vx = p.vx / sp * 1.7; p.vy = p.vy / sp * 1.7; }
+        p.x += p.vx * dtf;
+        p.y += p.vy * dtf;
+        if (p.x < -40) p.x = W + 38; else if (p.x > W + 40) p.x = -38;
+        if (p.y < -40) p.y = H + 38; else if (p.y > H + 40) p.y = -38;
+        /* パララックス適用後の描画座標（接続線・パルスもこれを使う） */
+        p.px = p.x + pmx * 26 * (p.z - 0.55);
+        p.py = p.y + pmy * 17 * (p.z - 0.55);
+      }
+
+      /* 塵：より弱い流れでゆっくり漂う（背景の奥行き担当） */
+      for (i = 0; i < dust.length; i++) {
+        p = dust[i];
+        p.a += (1 - p.a) * Math.min(1, 0.03 * dtf);
+        var ang2 = noise2(p.x * FLOW * 1.4 + p.seed, p.y * FLOW * 1.4 + tn * 1.3) * TAU * 2;
+        p.vx += Math.cos(ang2) * 0.006 * dtf;
+        p.vy += Math.sin(ang2) * 0.006 * dtf;
+        p.vx *= 0.985; p.vy *= 0.985;
+        p.x += p.vx * dtf;
+        p.y += p.vy * dtf;
+        if (p.x < -20) p.x = W + 18; else if (p.x > W + 20) p.x = -18;
+        if (p.y < -20) p.y = H + 18; else if (p.y > H + 20) p.y = -18;
+      }
+
+      /* パルスの自然発生・進行・到達発火（確率的な連鎖） */
+      nextPulseIn -= dt;
+      if (nextPulseIn <= 0) {
+        if (pulses.length < maxPulses()) spawnPulse(null);
+        nextPulseIn = 240 + Math.random() * 620;
+      }
+      for (i = pulses.length - 1; i >= 0; i--) {
+        var pl = pulses[i];
+        pl.t += dt;
+        if (pl.t >= pl.dur) {
+          flashes.push({ n: pl.b, ci: pl.b.ci, t: 0 });
+          var chain = pl.b;
+          pulses.splice(i, 1);
+          if (Math.random() < 0.55 && pulses.length < maxPulses()) spawnPulse(chain);
+        }
+      }
+      for (i = flashes.length - 1; i >= 0; i--) {
+        flashes[i].t += dt;
+        if (flashes[i].t > 430) flashes.splice(i, 1);
+      }
+    }
+
+    /* ---------- ジオメトリ構築（毎フレームCPUで詰める） ---------- */
+    function writeLine(x1, y1, x2, y2, c1, c2, alpha, halfW) {
+      if (li + 48 > LINE_CAP) return;
+      var dx = x2 - x1, dy = y2 - y1;
+      var len = Math.sqrt(dx * dx + dy * dy) || 1;
+      var nx = -dy / len * halfW, ny = dx / len * halfW;
+      var F = lineF, k = li;
+      /* 三角形1: A+n, A-n, B+n ／ 三角形2: B+n, A-n, B-n */
+      F[k++] = x1 + nx; F[k++] = y1 + ny; F[k++] = c1[0]; F[k++] = c1[1]; F[k++] = c1[2]; F[k++] = 1;  F[k++] = 0; F[k++] = alpha;
+      F[k++] = x1 - nx; F[k++] = y1 - ny; F[k++] = c1[0]; F[k++] = c1[1]; F[k++] = c1[2]; F[k++] = -1; F[k++] = 0; F[k++] = alpha;
+      F[k++] = x2 + nx; F[k++] = y2 + ny; F[k++] = c2[0]; F[k++] = c2[1]; F[k++] = c2[2]; F[k++] = 1;  F[k++] = 1; F[k++] = alpha;
+      F[k++] = x2 + nx; F[k++] = y2 + ny; F[k++] = c2[0]; F[k++] = c2[1]; F[k++] = c2[2]; F[k++] = 1;  F[k++] = 1; F[k++] = alpha;
+      F[k++] = x1 - nx; F[k++] = y1 - ny; F[k++] = c1[0]; F[k++] = c1[1]; F[k++] = c1[2]; F[k++] = -1; F[k++] = 0; F[k++] = alpha;
+      F[k++] = x2 - nx; F[k++] = y2 - ny; F[k++] = c2[0]; F[k++] = c2[1]; F[k++] = c2[2]; F[k++] = -1; F[k++] = 1; F[k++] = alpha;
+      li = k;
+    }
+    function writePoint(x, y, size, r, g, b, alpha, ring) {
+      if (pi + 8 > POINT_CAP) return;
+      if (size > maxPointSize / dpr) size = maxPointSize / dpr;
+      var F = pointF, k = pi;
+      F[k++] = x; F[k++] = y; F[k++] = size;
+      F[k++] = r; F[k++] = g; F[k++] = b; F[k++] = alpha;
+      F[k++] = ring;
+      pi = k;
+    }
+    var CURSOR_COL = [0.80, 0.96, 1.00];   /* 白熱シアン（パルス・カーソル用） */
+    var linkCount = [];
+    function buildGeometry() {
+      li = 0; pi = 0;
+      var n = nodes.length;
+      var ld2 = linkDist * linkDist;
+      var i, j, p, q, dx, dy, d2, d, alpha;
+      var tsec = clock * 0.001;
+
+      /* 接続線：O(n²)近傍探索（n≦240なので十分軽い）＋ノードあたり8本上限 */
+      if (linkCount.length < n) linkCount.length = n;
+      for (i = 0; i < n; i++) linkCount[i] = 0;
+      for (i = 0; i < n; i++) {
+        p = nodes[i];
+        if (linkCount[i] >= 8) continue;
+        for (j = i + 1; j < n; j++) {
+          if (linkCount[i] >= 8) break;
+          q = nodes[j];
+          if (linkCount[j] >= 8) continue;
+          dx = p.x - q.x; dy = p.y - q.y;
+          d2 = dx * dx + dy * dy;
+          if (d2 > ld2) continue;
+          d = Math.sqrt(d2);
+          var zavg = (p.z + q.z) * 0.5;
+          alpha = (1 - d / linkDist) * 0.5 * dim * (p.a < q.a ? p.a : q.a) * (0.55 + 0.55 * zavg);
+          if (alpha < 0.022) continue;
+          linkCount[i]++; linkCount[j]++;
+          var hw = (0.7 + 2.0 * alpha) * (0.65 + 0.55 * zavg);
+          writeLine(p.px, p.py, q.px, q.py, PAL[p.ci], PAL[q.ci], alpha, hw);
         }
       }
 
-      /* 減衰＋速度上限（弾け飛び防止） */
-      p.vx *= 0.982; p.vy *= 0.982;
-      var sp = p.vx * p.vx + p.vy * p.vy;
-      if (sp > 2.9) { sp = Math.sqrt(sp); p.vx = p.vx / sp * 1.7; p.vy = p.vy / sp * 1.7; }
+      /* カーソルからの一時接続線 */
+      var mA = mAl * dim;
+      if (mA > 0.02) {
+        for (i = 0; i < n; i++) {
+          p = nodes[i];
+          dx = p.px - mouse.x; dy = p.py - mouse.y;
+          d2 = dx * dx + dy * dy;
+          if (d2 > 160 * 160) continue;
+          d = Math.sqrt(d2);
+          alpha = (1 - d / 160) * 0.5 * mA * p.a;
+          if (alpha < 0.02) continue;
+          writeLine(mouse.x, mouse.y, p.px, p.py, CURSOR_COL, PAL[p.ci], alpha, 1.2);
+        }
+      }
 
-      p.x += p.vx * dtf;
-      p.y += p.vy * dtf;
+      /* パルス：進行中の接続線を強調＋光点（点はポイントパスで） */
+      for (i = 0; i < pulses.length; i++) {
+        var pl = pulses[i];
+        var kk = pl.t / pl.dur;
+        var fade = Math.sin(kk * Math.PI);
+        writeLine(pl.a.px, pl.a.py, pl.b.px, pl.b.py, CURSOR_COL, PAL[pl.b.ci], 0.4 * fade * dim, 1.7);
+      }
 
-      /* 画面端はマージン付きラップ（接続距離より広い余白なので端で線は飛ばない） */
-      if (p.x < -40) p.x = W + 38; else if (p.x > W + 40) p.x = -38;
-      if (p.y < -40) p.y = H + 38; else if (p.y > H + 40) p.y = -38;
-    }
+      /* 塵（背景の微細粒。zで奥行き＝小さく・暗く） */
+      for (i = 0; i < dust.length; i++) {
+        p = dust[i];
+        var twd = 0.72 + 0.28 * Math.sin(tsec * p.tws + p.ph);
+        var da = dim * p.a * 0.3 * (0.35 + 0.65 * p.z) * twd;
+        if (da < 0.01) continue;
+        var dxp = p.x + pmx * 26 * (p.z - 0.55);
+        var dyp = p.y + pmy * 17 * (p.z - 0.55);
+        var c = PAL[p.ci];
+        writePoint(dxp, dyp, 1.6 + p.s * 2.6 + p.z * 3.2, c[0], c[1], c[2], da, 0);
+      }
 
-    /* パルスの自然発生 */
-    nextPulseIn -= dt;
-    if (nextPulseIn <= 0) {
-      if (pulses.length < maxPulses()) spawnPulse(null);
-      nextPulseIn = 240 + Math.random() * 620;
-    }
-    /* パルス進行＋到達処理（発火フラッシュ＋確率的な連鎖） */
-    for (i = pulses.length - 1; i >= 0; i--) {
-      var pl = pulses[i];
-      pl.t += dt;
-      if (pl.t >= pl.dur) {
-        flashes.push({ x: pl.b.x, y: pl.b.y, ci: pl.b.ci, t: 0 });
-        var chain = pl.b;
-        pulses.splice(i, 1);
-        if (Math.random() < 0.55 && pulses.length < maxPulses()) spawnPulse(chain);
+      /* ノード（グロー輝核＋明滅。zでサイズ・輝度が変わる） */
+      for (i = 0; i < n; i++) {
+        p = nodes[i];
+        var tw = 0.7 + 0.3 * Math.sin(tsec * p.tws + p.ph);
+        var na = dim * p.a * (0.45 + 0.55 * p.z) * tw * 0.95;
+        if (na < 0.01) continue;
+        var cc = PAL[p.ci];
+        writePoint(p.px, p.py, p.r * (6.5 + 7.5 * p.z), cc[0], cc[1], cc[2], na, 0);
+      }
+
+      /* パルスの光点（smoothstepで走る） */
+      for (i = 0; i < pulses.length; i++) {
+        var pu = pulses[i];
+        var k2 = pu.t / pu.dur;
+        var e = k2 * k2 * (3 - 2 * k2);
+        var fd = Math.sin(k2 * Math.PI);
+        var x = pu.a.px + (pu.b.px - pu.a.px) * e;
+        var y = pu.a.py + (pu.b.py - pu.a.py) * e;
+        writePoint(x, y, 16, CURSOR_COL[0], CURSOR_COL[1], CURSOR_COL[2], fd * dim, 0);
+      }
+
+      /* 発火フラッシュ：グロー点＋拡大リング */
+      for (i = 0; i < flashes.length; i++) {
+        var fl = flashes[i];
+        var fk = fl.t / 430;
+        var fa = (1 - fk) * dim;
+        var fx = fl.n.px, fy = fl.n.py;
+        writePoint(fx, fy, 20, CURSOR_COL[0], CURSOR_COL[1], CURSOR_COL[2], fa * 0.55, 0);
+        var rc = PAL[fl.ci];
+        writePoint(fx, fy, 48, rc[0], rc[1], rc[2], fa * 0.5, 0.12 + 0.78 * fk);
+      }
+
+      /* カーソルの光点 */
+      if (mA > 0.02) {
+        writePoint(mouse.x, mouse.y, 30, CURSOR_COL[0], CURSOR_COL[1], CURSOR_COL[2], mA * 0.75, 0);
       }
     }
-    for (i = flashes.length - 1; i >= 0; i--) {
-      flashes[i].t += dt;
-      if (flashes[i].t > 430) flashes.splice(i, 1);
+
+    /* ---------- 描画 ---------- */
+    function updateBalls() {
+      var t = clock * 0.001;
+      var aspect = W / Math.max(1, H);
+      for (var i = 0; i < 7; i++) {
+        var b = BALLS[i];
+        ballData[i * 4]     = (b.fx - 0.5) * aspect + b.ax * Math.sin(t * b.sx + b.p1);
+        ballData[i * 4 + 1] = (0.5 - b.fy) + b.ay * Math.sin(t * b.sy + b.p2);
+        ballData[i * 4 + 2] = b.r * (1 + 0.13 * Math.sin(t * b.sr + b.pr));
+        ballData[i * 4 + 3] = b.ci;
+      }
     }
+    function render() {
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      /* PASS 1：メタボール */
+      updateBalls();
+      gl.useProgram(progBall);
+      gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+      gl.enableVertexAttribArray(locBall.aPos);
+      gl.vertexAttribPointer(locBall.aPos, 2, gl.FLOAT, false, 0, 0);
+      gl.uniform2f(locBall.uRes, gl.drawingBufferWidth, gl.drawingBufferHeight);
+      gl.uniform1f(locBall.uTime, clock * 0.001);
+      gl.uniform1f(locBall.uAlpha, (W < 700 ? 0.6 : 1.0) * (0.45 + 0.55 * dim));
+      gl.uniform4fv(locBall.uBalls, ballData);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.disableVertexAttribArray(locBall.aPos);
+
+      /* PASS 2：接続線 */
+      var lineVerts = li / 8;
+      if (lineVerts > 0) {
+        gl.useProgram(progLine);
+        gl.bindBuffer(gl.ARRAY_BUFFER, lineBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, lineF.subarray(0, li), gl.DYNAMIC_DRAW);
+        gl.enableVertexAttribArray(locLine.aPos);
+        gl.enableVertexAttribArray(locLine.aCol);
+        gl.enableVertexAttribArray(locLine.aEdge);
+        gl.enableVertexAttribArray(locLine.aAlpha);
+        gl.vertexAttribPointer(locLine.aPos, 2, gl.FLOAT, false, 32, 0);
+        gl.vertexAttribPointer(locLine.aCol, 3, gl.FLOAT, false, 32, 8);
+        gl.vertexAttribPointer(locLine.aEdge, 2, gl.FLOAT, false, 32, 20);
+        gl.vertexAttribPointer(locLine.aAlpha, 1, gl.FLOAT, false, 32, 28);
+        gl.uniform2f(locLine.uRes, W, H);
+        gl.drawArrays(gl.TRIANGLES, 0, lineVerts);
+        gl.disableVertexAttribArray(locLine.aPos);
+        gl.disableVertexAttribArray(locLine.aCol);
+        gl.disableVertexAttribArray(locLine.aEdge);
+        gl.disableVertexAttribArray(locLine.aAlpha);
+      }
+
+      /* PASS 3：ポイントスプライト */
+      var pointVerts = pi / 8;
+      if (pointVerts > 0) {
+        gl.useProgram(progPoint);
+        gl.bindBuffer(gl.ARRAY_BUFFER, pointBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, pointF.subarray(0, pi), gl.DYNAMIC_DRAW);
+        gl.enableVertexAttribArray(locPoint.aPos);
+        gl.enableVertexAttribArray(locPoint.aSize);
+        gl.enableVertexAttribArray(locPoint.aCol);
+        gl.enableVertexAttribArray(locPoint.aRing);
+        gl.vertexAttribPointer(locPoint.aPos, 2, gl.FLOAT, false, 32, 0);
+        gl.vertexAttribPointer(locPoint.aSize, 1, gl.FLOAT, false, 32, 8);
+        gl.vertexAttribPointer(locPoint.aCol, 4, gl.FLOAT, false, 32, 12);
+        gl.vertexAttribPointer(locPoint.aRing, 1, gl.FLOAT, false, 32, 28);
+        gl.uniform2f(locPoint.uRes, W, H);
+        gl.uniform1f(locPoint.uDpr, dpr);
+        gl.drawArrays(gl.POINTS, 0, pointVerts);
+        gl.disableVertexAttribArray(locPoint.aPos);
+        gl.disableVertexAttribArray(locPoint.aSize);
+        gl.disableVertexAttribArray(locPoint.aCol);
+        gl.disableVertexAttribArray(locPoint.aRing);
+      }
+    }
+    function renderFrame() {
+      buildGeometry();
+      render();
+    }
+
+    /* ---------- サイズ・解像度（devicePixelRatioは過剰に上げない） ---------- */
+    function resize() {
+      W = innerWidth; H = innerHeight;
+      dpr = Math.min(window.devicePixelRatio || 1, W < 700 ? 1.5 : 1.75);
+      glCanvas.width = Math.max(1, Math.round(W * dpr));
+      glCanvas.height = Math.max(1, Math.round(H * dpr));
+      gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+      linkDist = Math.max(96, Math.min(150, Math.sqrt(W * H) / 7));
+      if (reduced) staticFrame();
+    }
+
+    /* ---------- reduce環境用：静止1フレーム ---------- */
+    function staticFrame() {
+      var wantN = nodeTarget();
+      while (nodes.length < wantN) { var p = makeNode(); p.a = 1; nodes.push(p); }
+      nodes.length = wantN;
+      var wantD = dustTarget();
+      while (dust.length < wantD) { var q = makeDust(); q.a = 1; dust.push(q); }
+      dust.length = wantD;
+      pulses.length = 0;
+      flashes.length = 0;
+      dim = dimTarget * 0.85;
+      mAl = 0;
+      for (var k = 0; k < 24; k++) update(16.7);   /* 速度場を馴染ませてから静止 */
+      pulses.length = 0; flashes.length = 0;
+      renderFrame();
+    }
+
+    /* ---------- ループ制御：非表示タブ・画面外では止める ---------- */
+    var running = false, rafId = 0, prevT = 0;
+    var visible = (document.visibilityState !== 'hidden');
+    var inView = true;
+    var dead = false;   /* コンテキスト喪失後はtrue（以降このモジュールは沈黙） */
+    function frame(t) {
+      if (dead) return;
+      var dt = t - prevT;
+      prevT = t;
+      if (dt > 50) dt = 50;
+      if (dt < 0) dt = 16.7;
+      update(dt);
+      renderFrame();
+      rafId = requestAnimationFrame(frame);
+    }
+    function syncLoop() {
+      var should = !dead && !reduced && visible && inView;
+      if (should && !running) {
+        running = true;
+        prevT = performance.now();
+        rafId = requestAnimationFrame(frame);
+      } else if (!should && running) {
+        running = false;
+        cancelAnimationFrame(rafId);
+      }
+    }
+    document.addEventListener('visibilitychange', function () {
+      visible = (document.visibilityState !== 'hidden');
+      syncLoop();
+    });
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        inView = entries[0].isIntersecting;
+        syncLoop();
+      }).observe(glCanvas);
+    }
+
+    /* ---------- ビュー切り替え連動（ホーム＝高密度／他＝低密度・低輝度） ---------- */
+    document.addEventListener('portfolio:view', function (e) {
+      mode = (e.detail === 'home') ? 'hero' : 'calm';
+      dimTarget = (mode === 'hero') ? 1 : 0.62;
+      if (reduced && !dead) staticFrame();
+    });
+
+    /* ---------- コンテキスト喪失：Canvas 2D版へ切り替えて事故を防ぐ ---------- */
+    glCanvas.addEventListener('webglcontextlost', function (e) {
+      e.preventDefault();
+      dead = true;
+      syncLoop();
+      try { glCanvas.style.display = 'none'; } catch (e2) { /* noop */ }
+      docEl.classList.remove('webgl');
+      startNeural2D();
+    }, false);
+
+    /* ---------- 起動 ----------
+       ウォームスタート（一括生成＋空回しで定常状態化）→1フレーム描画→
+       GLエラー検査（異常があればthrow＝フォールバック）→クラス付与→ループ */
+    resize();
+    if (!reduced) {
+      var wantN0 = nodeTarget();
+      while (nodes.length < wantN0) { var n0 = makeNode(); n0.a = 1; nodes.push(n0); }
+      var wantD0 = dustTarget();
+      while (dust.length < wantD0) { var d0 = makeDust(); d0.a = 1; dust.push(d0); }
+      for (var w = 0; w < 36; w++) update(16.7);
+      renderFrame();
+    }
+    /* staticFrame（reduced時）はresize内で実行済み */
+    if (gl.getError() !== gl.NO_ERROR) {
+      throw new Error('gl error after first frame');
+    }
+    docEl.classList.add('webgl');
+    addEventListener('resize', resize);
+    if (!reduced) syncLoop();
+    return true;
   }
 
-  /* ---------- 描画 ---------- */
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    var n = particles.length;
-    var ld2 = linkDist * linkDist;
-    var i, j, p, q, dx, dy, d2, d, alpha;
+  /* ================================================================
+     Canvas 2D版（v7実装そのまま）— WebGL不可環境のフォールバック
+     ノイズフローで漂うノード＋距離減衰の接続線＋シナプスパルス＋
+     カーソル追従。詳細コメントはv7当時のまま維持。
+     ================================================================ */
+  var fallback2DStarted = false;
+  function startNeural2D() {
+    if (fallback2DStarted) return;
+    fallback2DStarted = true;
+    var canvas = canvas2d;
+    if (!canvas || !canvas.getContext) return;
+    var ctx = null;
+    try { ctx = canvas.getContext('2d'); } catch (e) { ctx = null; }
+    if (!ctx) return;   /* 2Dも不可：静的下地（グロー＋方眼＋SVGメタボール）が残る */
 
-    /* 接続線（コンステレーション） */
-    ctx.lineWidth = 1;
-    for (i = 0; i < n; i++) {
-      p = particles[i];
-      for (j = i + 1; j < n; j++) {
-        q = particles[j];
-        dx = p.x - q.x; dy = p.y - q.y;
-        d2 = dx * dx + dy * dy;
-        if (d2 > ld2) continue;
-        d = Math.sqrt(d2);
-        alpha = (1 - d / linkDist) * 0.55 * dim * (p.a < q.a ? p.a : q.a);
-        if (alpha < 0.02) continue;
-        ctx.strokeStyle = lineStyle(p.ci, alpha);
-        ctx.beginPath();
-        ctx.moveTo(p.x, p.y);
-        ctx.lineTo(q.x, q.y);
-        ctx.stroke();
+    var W = 0, H = 0;
+    var linkDist = 130;          /* 接続線を張る最大距離（画面サイズで再計算） */
+    var particles = [];
+    var pulses = [];             /* 接続線上を走る光点 */
+    var flashes = [];            /* パルス到達点の発火フラッシュ */
+    var mode = 'hero';           /* 'hero'（ホーム）＝高密度 / 'calm'（他ビュー）＝低密度 */
+    var dim = 1, dimTarget = 1;  /* モード別の全体輝度（滑らかに補間） */
+    var clock = 0;               /* 累積時間ms（フローフィールドの時間軸） */
+    var nextPulseIn = 600;       /* 次のパルス自然発生までの残りms */
+
+    /* パレット＝デザイントークンと同一（--synapse / --axon / --c3） */
+    var PALETTE = [
+      { r: 79,  g: 216, b: 232 },   /* synapse cyan   */
+      { r: 108, g: 124, b: 255 },   /* axon indigo    */
+      { r: 157, g: 140, b: 255 }    /* violet (--c3)  */
+    ];
+    var CORE = ['rgba(139,234,245,0.95)', 'rgba(158,170,255,0.95)', 'rgba(191,178,255,0.95)'];
+    function pickColor() {
+      var t = Math.random();
+      return t < 0.52 ? 0 : (t < 0.84 ? 1 : 2);
+    }
+
+    /* strokeStyle文字列を毎線生成しない：色×アルファ量子化のキャッシュ */
+    var LEVELS = 24;
+    var lineCache = PALETTE.map(function (c) {
+      var arr = [];
+      for (var k = 0; k <= LEVELS; k++) {
+        arr.push('rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + (k / LEVELS).toFixed(3) + ')');
+      }
+      return arr;
+    });
+    function lineStyle(ci, alpha) {
+      var k = Math.round(alpha * LEVELS);
+      if (k < 0) k = 0; else if (k > LEVELS) k = LEVELS;
+      return lineCache[ci][k];
+    }
+
+    /* 発光スプライト：radialGradientをオフスクリーンに一度だけ焼き、
+       以後は drawImage のみ（shadowBlurより桁違いに軽い） */
+    function makeGlow(r, g, b, coreA) {
+      var s = document.createElement('canvas');
+      s.width = s.height = 64;
+      var gg = s.getContext('2d');
+      var grad = gg.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',' + coreA + ')');
+      grad.addColorStop(0.38, 'rgba(' + r + ',' + g + ',' + b + ',' + (coreA * 0.3).toFixed(3) + ')');
+      grad.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+      gg.fillStyle = grad;
+      gg.fillRect(0, 0, 64, 64);
+      return s;
+    }
+    var glows = PALETTE.map(function (c) { return makeGlow(c.r, c.g, c.b, 0.6); });
+    var pulseGlow = makeGlow(205, 246, 252, 0.95);  /* パルス・カーソル用の白熱シアン */
+
+    /* ---------- 疑似バリューノイズ（自作・2D）。滑らかな流れ場を作る ---------- */
+    function hash2(ix, iy) {
+      var n = Math.sin(ix * 127.1 + iy * 311.7) * 43758.5453123;
+      return n - Math.floor(n);
+    }
+    function noise2(x, y) {
+      var ix = Math.floor(x), iy = Math.floor(y);
+      var fx = x - ix, fy = y - iy;
+      var ux = fx * fx * (3 - 2 * fx);
+      var uy = fy * fy * (3 - 2 * fy);
+      var a = hash2(ix, iy), b = hash2(ix + 1, iy);
+      var c = hash2(ix, iy + 1), d = hash2(ix + 1, iy + 1);
+      return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+    }
+
+    /* ---------- パーティクル ---------- */
+    function makeParticle() {
+      return {
+        x: Math.random() * W,
+        y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        r: 1.1 + Math.random() * 1.4,
+        ci: pickColor(),
+        seed: Math.random() * 100,
+        a: 0   /* 出現フェードイン用の個体アルファ */
+      };
+    }
+    function targetCount() {
+      var base = Math.round((W * H) / 12500);       /* 1440x900 ≈ 104個 / 390x844 ≈ 26個 */
+      if (base < 30) base = 30;
+      if (base > 108) base = 108;
+      if (W < 700) base = Math.min(base, 44);       /* モバイル上限 */
+      return mode === 'hero' ? base : Math.round(base * 0.55);
+    }
+    function maxPulses() {
+      if (mode === 'hero') return W < 700 ? 3 : 7;
+      return W < 700 ? 2 : 4;
+    }
+
+    /* ---------- カーソル（Neural Interface） ---------- */
+    var mouse = { x: -9999, y: -9999, t: -1e9 };
+    var mAl = 0;  /* カーソル効果の強度（最後の移動から2.6秒で減衰） */
+    function trackPoint(x, y) {
+      mouse.x = x; mouse.y = y; mouse.t = performance.now();
+    }
+    addEventListener('mousemove', function (e) { trackPoint(e.clientX, e.clientY); }, { passive: true });
+    addEventListener('touchstart', function (e) {
+      if (e.touches && e.touches[0]) trackPoint(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    addEventListener('touchmove', function (e) {
+      if (e.touches && e.touches[0]) trackPoint(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+
+    /* ---------- シナプスパルス ---------- */
+    function spawnPulse(from) {
+      var a = from || particles[(Math.random() * particles.length) | 0];
+      if (!a) return;
+      /* 現在つながっている（=接続線が引かれている）相手からランダムに行き先を選ぶ */
+      var cands = [];
+      var ld2 = linkDist * linkDist;
+      for (var j = 0; j < particles.length; j++) {
+        var b = particles[j];
+        if (b === a) continue;
+        var dx = a.x - b.x, dy = a.y - b.y;
+        if (dx * dx + dy * dy < ld2) cands.push(b);
+      }
+      if (!cands.length) return;
+      pulses.push({
+        a: a,
+        b: cands[(Math.random() * cands.length) | 0],
+        t: 0,
+        dur: 460 + Math.random() * 420
+      });
+    }
+
+    /* ---------- 更新 ---------- */
+    var FLOW = 0.0011;  /* フローフィールドの空間スケール */
+    function update(dt) {
+      clock += dt;
+      var dtf = dt / 16.7;  /* 60fps基準の時間係数 */
+      var tn = clock * 0.000045;
+
+      /* 個体数はターゲットへ毎フレーム1個ずつ滑らかに増減 */
+      var want = targetCount();
+      for (var add = 0; add < 3 && particles.length < want; add++) particles.push(makeParticle());
+      if (particles.length > want) particles.pop();
+
+      dim += (dimTarget - dim) * Math.min(1, 0.05 * dtf);
+
+      /* カーソル強度の減衰 */
+      var mTarget = (performance.now() - mouse.t < 2600) ? 1 : 0;
+      mAl += (mTarget - mAl) * Math.min(1, 0.07 * dtf);
+
+      for (var i = 0; i < particles.length; i++) {
+        var p = particles[i];
+        p.a += (1 - p.a) * Math.min(1, 0.035 * dtf);
+
+        /* ノイズ場の角度に沿って加速（緩急のある有機的ドリフト） */
+        var ang = noise2(p.x * FLOW + p.seed, p.y * FLOW + tn) * Math.PI * 4;
+        p.vx += Math.cos(ang) * 0.016 * dtf;
+        p.vy += Math.sin(ang) * 0.016 * dtf;
+
+        /* カーソル近傍：緩い引力（至近距離では軽い反発で潰れを防ぐ） */
+        if (mAl > 0.02) {
+          var mdx = mouse.x - p.x, mdy = mouse.y - p.y;
+          var md = Math.sqrt(mdx * mdx + mdy * mdy) || 1;
+          if (md < 190) {
+            var f = (md < 46 ? -0.03 : (1 - md / 190) * 0.05) * mAl * dtf;
+            p.vx += (mdx / md) * f;
+            p.vy += (mdy / md) * f;
+          }
+        }
+
+        /* 減衰＋速度上限（弾け飛び防止） */
+        p.vx *= 0.982; p.vy *= 0.982;
+        var sp = p.vx * p.vx + p.vy * p.vy;
+        if (sp > 2.9) { sp = Math.sqrt(sp); p.vx = p.vx / sp * 1.7; p.vy = p.vy / sp * 1.7; }
+
+        p.x += p.vx * dtf;
+        p.y += p.vy * dtf;
+
+        /* 画面端はマージン付きラップ（接続距離より広い余白なので端で線は飛ばない） */
+        if (p.x < -40) p.x = W + 38; else if (p.x > W + 40) p.x = -38;
+        if (p.y < -40) p.y = H + 38; else if (p.y > H + 40) p.y = -38;
+      }
+
+      /* パルスの自然発生 */
+      nextPulseIn -= dt;
+      if (nextPulseIn <= 0) {
+        if (pulses.length < maxPulses()) spawnPulse(null);
+        nextPulseIn = 240 + Math.random() * 620;
+      }
+      /* パルス進行＋到達処理（発火フラッシュ＋確率的な連鎖） */
+      for (i = pulses.length - 1; i >= 0; i--) {
+        var pl = pulses[i];
+        pl.t += dt;
+        if (pl.t >= pl.dur) {
+          flashes.push({ x: pl.b.x, y: pl.b.y, ci: pl.b.ci, t: 0 });
+          var chain = pl.b;
+          pulses.splice(i, 1);
+          if (Math.random() < 0.55 && pulses.length < maxPulses()) spawnPulse(chain);
+        }
+      }
+      for (i = flashes.length - 1; i >= 0; i--) {
+        flashes[i].t += dt;
+        if (flashes[i].t > 430) flashes.splice(i, 1);
       }
     }
 
-    /* カーソルからの一時接続線＋カーソル光点 */
-    var mA = mAl * dim;
-    if (mA > 0.02) {
+    /* ---------- 描画 ---------- */
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      var n = particles.length;
+      var ld2 = linkDist * linkDist;
+      var i, j, p, q, dx, dy, d2, d, alpha;
+
+      /* 接続線（コンステレーション） */
+      ctx.lineWidth = 1;
       for (i = 0; i < n; i++) {
         p = particles[i];
-        dx = p.x - mouse.x; dy = p.y - mouse.y;
-        d2 = dx * dx + dy * dy;
-        if (d2 > 160 * 160) continue;
-        d = Math.sqrt(d2);
-        alpha = (1 - d / 160) * 0.5 * mA * p.a;
-        if (alpha < 0.02) continue;
-        ctx.strokeStyle = lineStyle(0, alpha);
-        ctx.beginPath();
-        ctx.moveTo(mouse.x, mouse.y);
-        ctx.lineTo(p.x, p.y);
-        ctx.stroke();
+        for (j = i + 1; j < n; j++) {
+          q = particles[j];
+          dx = p.x - q.x; dy = p.y - q.y;
+          d2 = dx * dx + dy * dy;
+          if (d2 > ld2) continue;
+          d = Math.sqrt(d2);
+          alpha = (1 - d / linkDist) * 0.55 * dim * (p.a < q.a ? p.a : q.a);
+          if (alpha < 0.02) continue;
+          ctx.strokeStyle = lineStyle(p.ci, alpha);
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(q.x, q.y);
+          ctx.stroke();
+        }
       }
-      ctx.globalAlpha = mA * 0.85;
-      ctx.drawImage(pulseGlow, mouse.x - 15, mouse.y - 15, 30, 30);
-      ctx.globalAlpha = 1;
+
+      /* カーソルからの一時接続線＋カーソル光点 */
+      var mA = mAl * dim;
+      if (mA > 0.02) {
+        for (i = 0; i < n; i++) {
+          p = particles[i];
+          dx = p.x - mouse.x; dy = p.y - mouse.y;
+          d2 = dx * dx + dy * dy;
+          if (d2 > 160 * 160) continue;
+          d = Math.sqrt(d2);
+          alpha = (1 - d / 160) * 0.5 * mA * p.a;
+          if (alpha < 0.02) continue;
+          ctx.strokeStyle = lineStyle(0, alpha);
+          ctx.beginPath();
+          ctx.moveTo(mouse.x, mouse.y);
+          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = mA * 0.85;
+        ctx.drawImage(pulseGlow, mouse.x - 15, mouse.y - 15, 30, 30);
+        ctx.globalAlpha = 1;
+      }
+
+      /* ノード（グロー＋コア） */
+      for (i = 0; i < n; i++) {
+        p = particles[i];
+        var ga = dim * p.a;
+        var gs = p.r * 10;
+        ctx.globalAlpha = ga * 0.8;
+        ctx.drawImage(glows[p.ci], p.x - gs / 2, p.y - gs / 2, gs, gs);
+        ctx.globalAlpha = ga;
+        ctx.fillStyle = CORE[p.ci];
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, TAU);
+        ctx.fill();
+      }
+
+      /* シナプスパルス：接続線を強調しつつ光点が走る */
+      for (i = 0; i < pulses.length; i++) {
+        var pl = pulses[i];
+        var k = pl.t / pl.dur;
+        var e = k * k * (3 - 2 * k);          /* smoothstep */
+        var fade = Math.sin(k * Math.PI);      /* 出入りでフェード */
+        var x = pl.a.x + (pl.b.x - pl.a.x) * e;
+        var y = pl.a.y + (pl.b.y - pl.a.y) * e;
+        ctx.strokeStyle = lineStyle(pl.b.ci, 0.4 * fade * dim);
+        ctx.beginPath();
+        ctx.moveTo(pl.a.x, pl.a.y);
+        ctx.lineTo(pl.b.x, pl.b.y);
+        ctx.stroke();
+        ctx.globalAlpha = fade * dim;
+        ctx.drawImage(pulseGlow, x - 10, y - 10, 20, 20);
+        ctx.globalAlpha = 1;
+      }
+
+      /* 発火フラッシュ：到達点から広がるリング */
+      for (i = 0; i < flashes.length; i++) {
+        var fl = flashes[i];
+        var fk = fl.t / 430;
+        var rr = 3 + fk * 20;
+        var fa = (1 - fk) * 0.65 * dim;
+        ctx.globalAlpha = fa;
+        ctx.drawImage(pulseGlow, fl.x - 13, fl.y - 13, 26, 26);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = lineStyle(fl.ci, fa);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(fl.x, fl.y, rr, 0, TAU);
+        ctx.stroke();
+        ctx.lineWidth = 1;
+      }
     }
 
-    /* ノード（グロー＋コア） */
-    for (i = 0; i < n; i++) {
-      p = particles[i];
-      var ga = dim * p.a;
-      var gs = p.r * 10;
-      ctx.globalAlpha = ga * 0.8;
-      ctx.drawImage(glows[p.ci], p.x - gs / 2, p.y - gs / 2, gs, gs);
-      ctx.globalAlpha = ga;
-      ctx.fillStyle = CORE[p.ci];
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, TAU);
-      ctx.fill();
+    /* ---------- reduce環境用：静止1フレーム（ノード＋接続線のみ・完全には消さない） ---------- */
+    function staticFrame() {
+      var want = targetCount();
+      while (particles.length < want) {
+        var p = makeParticle();
+        p.a = 1;
+        particles.push(p);
+      }
+      particles.length = want;
+      pulses.length = 0;
+      flashes.length = 0;
+      dim = 0.85;
+      mAl = 0;
+      draw();
     }
 
-    /* シナプスパルス：接続線を強調しつつ光点が走る */
-    for (i = 0; i < pulses.length; i++) {
-      var pl = pulses[i];
-      var k = pl.t / pl.dur;
-      var e = k * k * (3 - 2 * k);          /* smoothstep */
-      var fade = Math.sin(k * Math.PI);      /* 出入りでフェード */
-      var x = pl.a.x + (pl.b.x - pl.a.x) * e;
-      var y = pl.a.y + (pl.b.y - pl.a.y) * e;
-      ctx.strokeStyle = lineStyle(pl.b.ci, 0.4 * fade * dim);
-      ctx.beginPath();
-      ctx.moveTo(pl.a.x, pl.a.y);
-      ctx.lineTo(pl.b.x, pl.b.y);
-      ctx.stroke();
-      ctx.globalAlpha = fade * dim;
-      ctx.drawImage(pulseGlow, x - 10, y - 10, 20, 20);
-      ctx.globalAlpha = 1;
+    /* ---------- サイズ・解像度（devicePixelRatioは過剰に上げない） ---------- */
+    function resize() {
+      W = innerWidth; H = innerHeight;
+      var dpr = Math.min(window.devicePixelRatio || 1, W < 700 ? 1.5 : 1.75);
+      canvas.width = Math.max(1, Math.round(W * dpr));
+      canvas.height = Math.max(1, Math.round(H * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      linkDist = Math.max(96, Math.min(150, Math.sqrt(W * H) / 7));
+      if (reduced) staticFrame();
     }
+    addEventListener('resize', resize);
 
-    /* 発火フラッシュ：到達点から広がるリング */
-    for (i = 0; i < flashes.length; i++) {
-      var fl = flashes[i];
-      var fk = fl.t / 430;
-      var rr = 3 + fk * 20;
-      var fa = (1 - fk) * 0.65 * dim;
-      ctx.globalAlpha = fa;
-      ctx.drawImage(pulseGlow, fl.x - 13, fl.y - 13, 26, 26);
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = lineStyle(fl.ci, fa);
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.arc(fl.x, fl.y, rr, 0, TAU);
-      ctx.stroke();
-      ctx.lineWidth = 1;
-    }
-  }
-
-  /* ---------- reduce環境用：静止1フレーム（ノード＋接続線のみ・完全には消さない） ---------- */
-  function staticFrame() {
-    var want = targetCount();
-    while (particles.length < want) {
-      var p = makeParticle();
-      p.a = 1;
-      particles.push(p);
-    }
-    particles.length = want;
-    pulses.length = 0;
-    flashes.length = 0;
-    dim = 0.85;
-    mAl = 0;
-    draw();
-  }
-
-  /* ---------- サイズ・解像度（devicePixelRatioは過剰に上げない） ---------- */
-  function resize() {
-    W = innerWidth; H = innerHeight;
-    var dpr = Math.min(window.devicePixelRatio || 1, W < 700 ? 1.5 : 1.75);
-    canvas.width = Math.max(1, Math.round(W * dpr));
-    canvas.height = Math.max(1, Math.round(H * dpr));
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    linkDist = Math.max(96, Math.min(150, Math.sqrt(W * H) / 7));
-    if (reduced) staticFrame();
-  }
-  addEventListener('resize', resize);
-
-  /* ---------- ループ制御：非表示タブ・画面外では止める ---------- */
-  var running = false, rafId = 0, prevT = 0;
-  var visible = (document.visibilityState !== 'hidden');
-  var inView = true;
-  function frame(t) {
-    var dt = t - prevT;
-    prevT = t;
-    if (dt > 50) dt = 50;      /* タブ復帰直後などの巨大デルタを抑制 */
-    if (dt < 0) dt = 16.7;
-    update(dt);
-    draw();
-    rafId = requestAnimationFrame(frame);
-  }
-  function syncLoop() {
-    var should = !reduced && visible && inView;
-    if (should && !running) {
-      running = true;
-      prevT = performance.now();
+    /* ---------- ループ制御：非表示タブ・画面外では止める ---------- */
+    var running = false, rafId = 0, prevT = 0;
+    var visible = (document.visibilityState !== 'hidden');
+    var inView = true;
+    function frame(t) {
+      var dt = t - prevT;
+      prevT = t;
+      if (dt > 50) dt = 50;      /* タブ復帰直後などの巨大デルタを抑制 */
+      if (dt < 0) dt = 16.7;
+      update(dt);
+      draw();
       rafId = requestAnimationFrame(frame);
-    } else if (!should && running) {
-      running = false;
-      cancelAnimationFrame(rafId);
     }
-  }
-  document.addEventListener('visibilitychange', function () {
-    visible = (document.visibilityState !== 'hidden');
-    syncLoop();
-  });
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver(function (entries) {
-      inView = entries[0].isIntersecting;
+    function syncLoop() {
+      var should = !reduced && visible && inView;
+      if (should && !running) {
+        running = true;
+        prevT = performance.now();
+        rafId = requestAnimationFrame(frame);
+      } else if (!should && running) {
+        running = false;
+        cancelAnimationFrame(rafId);
+      }
+    }
+    document.addEventListener('visibilitychange', function () {
+      visible = (document.visibilityState !== 'hidden');
       syncLoop();
-    }).observe(canvas);
-  }
-
-  /* ---------- ビュー切り替え連動（ホーム＝高密度／他＝低密度・低輝度） ---------- */
-  document.addEventListener('portfolio:view', function (e) {
-    mode = (e.detail === 'home') ? 'hero' : 'calm';
-    dimTarget = (mode === 'hero') ? 1 : 0.62;
-    if (reduced) staticFrame();
-  });
-
-  /* ---------- 起動 ----------
-     初回表示から完成したネットワークを見せるためのウォームスタート：
-     ターゲット数まで一括生成（フェードイン済み）→ 数十フレームぶん空回しして
-     速度場・パルスを定常状態にしてからループ開始 */
-  function warmStart() {
-    var want = targetCount();
-    while (particles.length < want) {
-      var p = makeParticle();
-      p.a = 1;
-      particles.push(p);
+    });
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        inView = entries[0].isIntersecting;
+        syncLoop();
+      }).observe(canvas);
     }
-    for (var k = 0; k < 36; k++) update(16.7);
+
+    /* ---------- ビュー切り替え連動（ホーム＝高密度／他＝低密度・低輝度） ---------- */
+    document.addEventListener('portfolio:view', function (e) {
+      mode = (e.detail === 'home') ? 'hero' : 'calm';
+      dimTarget = (mode === 'hero') ? 1 : 0.62;
+      if (reduced) staticFrame();
+    });
+
+    /* ---------- 起動 ----------
+       初回表示から完成したネットワークを見せるためのウォームスタート：
+       ターゲット数まで一括生成（フェードイン済み）→ 数十フレームぶん空回しして
+       速度場・パルスを定常状態にしてからループ開始 */
+    function warmStart() {
+      var want = targetCount();
+      while (particles.length < want) {
+        var p = makeParticle();
+        p.a = 1;
+        particles.push(p);
+      }
+      for (var k = 0; k < 36; k++) update(16.7);
+    }
+    resize();
+    if (!reduced) {
+      warmStart();
+      syncLoop();
+    }
   }
-  resize();
-  if (!reduced) {
-    warmStart();
-    syncLoop();
-  }
+
+  /* ---------- エントリポイント：WebGL優先、失敗時はCanvas 2Dへ ---------- */
+  if (!startWebGL()) startNeural2D();
 })();
 </script>
