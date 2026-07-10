@@ -177,6 +177,17 @@ button{
      visibility はリビール前に黒い板が見えないようにするための切り替え（遷移対象外＝即時）。 */
   html.js .fx{ visibility:hidden; filter:brightness(0); transform:translateY(16px); transition:filter .6s ease, transform .6s ease; }
   html.js .fx.in{ visibility:visible; filter:none; transform:none; }
+  /* 【重要・凍結バグ防止】プログラム的リビール（revealWithin等が .in と同時に付与する .in-set）
+     ではトランジションを走らせず即時に完成状態へ。
+     ハッシュ直リンク（#profile 等）では対象ビューが一度も display:none にならないため、
+     DOMContentLoaded 中の .in 付与が初回描画前に本物の filter トランジションを開始してしまい、
+     描画フレームが進まない環境（ヘッドレス・バックグラウンドタブ読込等）では
+     brightness(0) のまま凍結して本文が黒く残る。クリック遷移は hidden→表示の切替で
+     元々トランジションが走らない（即時完成）ため、.in-set で両経路の挙動を統一する。
+     IntersectionObserver によるスクロール出現（.in のみ付与）は従来通りアニメーションする。 */
+  html.js .fx.in-set{ transition:none; }
+  html.js .viz.in-set .anim-x, html.js .viz.in-set .g-val,
+  html.js .viz.in-set .anim-draw, html.js .viz.in-set .anim-fade{ transition:none; }
   html.js .hero-load > *{ visibility:hidden; filter:brightness(0); transform:translateY(18px); animation:rise .75s cubic-bezier(.22,.61,.36,1) forwards; }
   html.js .hero-load > *:nth-child(1){ animation-delay:.05s; }
   html.js .hero-load > *:nth-child(2){ animation-delay:.15s; }
@@ -678,6 +689,91 @@ html:not(.js) .crumbs{ display:none; }
   .define .v{ padding-top:0.25rem; }
 }
 
+/* ---------- career timeline（経歴ストーリー：LinkedIn風タイムラインカード） ----------
+   構成：左＝期間（等幅ラベル・右寄せ）／中＝丸い線画アイコン（業界アイコン群と同じ
+   .ic ストロークスタイル＋tone-c*カラートークン）／右＝組織・役職・説明のカード。
+   丸アイコン同士は縦の破線（.step::before と同じシアン断続線）で連結。
+   【重要】出現アニメーションは既存 .fx（visibility＋filter:brightness）を各 li に
+   付与して再利用する。opacityフェードは使わない（背景WebGLの透けバグ再発防止）。
+   .tl-body は background-color:var(--cell) の完全不透明カード。 */
+.tl-head{ margin-top:2.4rem; }
+.tl-head h3{ margin:0; }
+.tl-sub{
+  margin:0.45rem 0 0; font-family:var(--font-mono); font-weight:600;
+  font-size:0.66rem; letter-spacing:0.1em; color:var(--ink-faint);
+}
+.career-tl{ list-style:none; margin:1.3rem 0 0; padding:0; }
+.tl-item{
+  position:relative; display:grid;
+  grid-template-columns:8.5em 52px minmax(0,1fr);
+  grid-template-areas:"period logo body";
+  gap:0 1.1rem;
+  padding-bottom:1.35rem;
+}
+.tl-item:last-child{ padding-bottom:0; }
+/* 縦の連結線：ロゴ円の中心線上を次のロゴまで貫く（最終エントリは無し） */
+.tl-item::before{
+  content:""; position:absolute; top:56px; bottom:-4px;
+  left:calc(8.5em + 1.1rem + 26px); width:1px;
+  background-image:repeating-linear-gradient(180deg, rgba(79,216,232,0.4) 0 5px, transparent 5px 11px);
+}
+.tl-item:last-child::before{ display:none; }
+.tl-period{ grid-area:period; padding-top:0.6rem; text-align:right; }
+.tl-when{
+  display:block; font-family:var(--font-mono); font-weight:600;
+  font-size:0.7rem; letter-spacing:0.05em; line-height:1.8; color:var(--ink-soft);
+}
+.tl-logo{
+  grid-area:logo; width:52px; height:52px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; align-self:start;
+  position:relative; z-index:1; /* 連結線より手前（円の内側に線を見せない） */
+  background:
+    radial-gradient(70% 70% at 50% 35%, rgba(79,216,232,0.12) 0%, transparent 75%),
+    var(--void-2);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow), 0 0 18px rgba(76,102,245,0.16);
+}
+.tl-logo svg{ width:30px; height:auto; filter:drop-shadow(0 0 10px currentColor); }
+.tl-body{
+  grid-area:body; position:relative; min-width:0;
+  border:1px solid var(--line); border-radius:10px;
+  background-color:var(--cell);
+  background-image:linear-gradient(160deg, var(--cell-2) 0%, var(--cell) 45%);
+  box-shadow:var(--shadow);
+  padding:0.95rem 1.15rem 1.05rem;
+}
+/* 設計図のL字コーナーマーカー（既存カード群と同じモチーフ・装飾のみ） */
+.tl-body::before, .tl-body::after{
+  content:""; position:absolute; width:10px; height:10px; pointer-events:none;
+}
+.tl-body::before{ top:6px; left:6px; border-top:1px solid rgba(79,216,232,0.35); border-left:1px solid rgba(79,216,232,0.35); }
+.tl-body::after{ bottom:6px; right:6px; border-bottom:1px solid rgba(79,216,232,0.35); border-right:1px solid rgba(79,216,232,0.35); }
+.tl-org-row, .tl-role-row{ display:flex; flex-wrap:wrap; align-items:baseline; gap:0.35rem 0.6rem; }
+.tl-role-row{ margin-top:0.35rem; }
+.tl-org{
+  margin:0; font-family:var(--font-sans); font-weight:700;
+  font-size:0.97rem; letter-spacing:0.02em; line-height:1.6; color:var(--ink);
+}
+.tl-org a{ color:inherit; text-decoration-color:rgba(79,216,232,0.5); }
+.tl-org a:hover{ color:var(--synapse-bright); }
+.tl-role{ margin:0; font-size:0.8rem; font-weight:600; color:var(--ink-soft); letter-spacing:0.03em; }
+.tl-desc{ margin:0.6rem 0 0; font-size:0.84rem; line-height:1.95; color:var(--ink-soft); }
+.tl-note{ margin:1rem 0 0; }
+@media (max-width:640px){
+  /* モバイル：期間ラベルはカード上に載せ、ロゴ列＋本文の2カラムに畳む */
+  .tl-item{
+    grid-template-columns:44px minmax(0,1fr);
+    grid-template-areas:"logo period" "logo body";
+    gap:0 0.85rem;
+  }
+  .tl-item::before{ top:48px; left:22px; }
+  .tl-logo{ width:44px; height:44px; }
+  .tl-logo svg{ width:26px; }
+  .tl-period{ text-align:left; padding-top:0; }
+  .tl-when{ margin-bottom:0.35rem; line-height:1.6; }
+  .tl-when br{ display:none; }
+}
+
 /* ---------- pull quote ---------- */
 .pull{
   position:relative; margin:1.8rem 0; padding:0.4rem 0 0.4rem 1.6rem;
@@ -1141,6 +1237,24 @@ html:not(.js) .crumbs{ display:none; }
     <path d="M70 62c0-11 8-19 18-19s18 8 18 19"/>
     <path d="M48 45l6.5 6.5L68 38"/>
   </symbol>
+
+  <!-- 経歴タイムライン用：オンライン塾の立ち上げ（モニター＋上昇カーブ） -->
+  <symbol id="ic-launch" viewBox="0 0 120 84">
+    <rect x="30" y="13" width="60" height="43" rx="5"/>
+    <line x1="60" y1="56" x2="60" y2="66"/>
+    <line x1="46" y1="66" x2="74" y2="66"/>
+    <path d="M40 46 52 35l8 5 18-15"/>
+    <path d="M70 25h8v8"/>
+  </symbol>
+
+  <!-- 経歴タイムライン用：事業会社（ブリーフケース） -->
+  <symbol id="ic-corp" viewBox="0 0 120 84">
+    <rect x="30" y="28" width="60" height="38" rx="6"/>
+    <path d="M50 28v-6a6 6 0 0 1 6-6h8a6 6 0 0 1 6 6v6"/>
+    <line x1="30" y1="45" x2="53" y2="45"/>
+    <line x1="67" y1="45" x2="90" y2="45"/>
+    <rect x="53" y="40" width="14" height="10" rx="2"/>
+  </symbol>
 </svg>
 
 <header class="topbar">
@@ -1230,20 +1344,55 @@ html:not(.js) .crumbs{ display:none; }
       <div class="row"><div class="k">経歴</div><div class="v">幼稚園〜大学2年生まで16年間野球に打ち込む</div></div>
       <div class="row"><div class="k">趣味</div><div class="v">香水・お香にハマり中。ほか美容・服・ご飯・🍺</div></div>
       <div class="row"><div class="k">座右の銘</div><div class="v">You will never fail until you stop trying（挑戦をやめるまでは、失敗ではない）</div></div>
-      <div class="row"><div class="k">現在の所属</div><div class="v">
-        <p><a href="https://llcmeme.com/" target="_blank" rel="noopener">合同会社Meme</a>／WEBマーケター</p>
-        <p><a href="https://wakaru.biz/" target="_blank" rel="noopener">wakaru株式会社</a>／広告ディレクター</p>
-        <p class="note">※ どちらも業務委託・時給稼働体制（現在稼働なし）</p>
-      </div></div>
     </div>
 
-    <details class="fold fx">
-      <summary><span>経歴ストーリー</span><span class="hint">学生起業 → 事業会社 → 複数社の横断支援</span></summary>
-      <div class="fold-body">
-        <p>ビジネスのスタートは大学在学中、理学療法士国家試験対策のオンライン塾を立ち上げたこと。半年でInstagramからの集客数が、年間12,000人が受験する試験に対してその1/4を確保するまでに成長しました。</p>
-        <p>ただ卒業後、半年間ひとりで継続する中で「ひとりでビジネスをすることの退屈さ」を感じ、事業会社にてマーケターとして活動を開始。以来、広告運用・SNS運用・LP制作・CRMを横断しながら、複数のブランド・事業のマーケティング戦略〜実行を担っています。</p>
-      </div>
-    </details>
+    <!-- 経歴ストーリー：LinkedIn風タイムラインカード。
+         左＝期間／中＝丸い線画アイコン（縦の破線で連結）／右＝組織名・役職・説明のカード。
+         出現アニメーションは既存の .fx（visibility＋filter:brightness）を再利用
+         ＝opacityフェード非使用（背景WebGLがカードへ透けるバグの再発防止方針を踏襲）。 -->
+    <div class="tl-head fx">
+      <h3>経歴ストーリー</h3>
+      <p class="tl-sub">学生起業 → 事業会社 → 複数社の横断支援</p>
+    </div>
+    <ol class="career-tl">
+      <li class="tl-item fx">
+        <div class="tl-period"><span class="tl-when">大学在学中<br>〜 卒業後半年</span></div>
+        <div class="tl-logo tone-c3" aria-hidden="true"><svg class="ic"><use href="#ic-launch"></use></svg></div>
+        <div class="tl-body">
+          <div class="tl-org-row"><p class="tl-org">理学療法士国家試験対策のオンライン塾</p><span class="chip violet">学生起業</span></div>
+          <div class="tl-role-row"><p class="tl-role">立ち上げ・運営</p></div>
+          <p class="tl-desc">ビジネスのスタートは大学在学中、理学療法士国家試験対策のオンライン塾を立ち上げたこと。半年でInstagramからの集客数が、年間12,000人が受験する試験に対してその1/4を確保するまでに成長しました。</p>
+        </div>
+      </li>
+      <li class="tl-item fx">
+        <div class="tl-period"><span class="tl-when">卒業後半年 〜</span></div>
+        <div class="tl-logo tone-c2" aria-hidden="true"><svg class="ic"><use href="#ic-corp"></use></svg></div>
+        <div class="tl-body">
+          <div class="tl-org-row"><p class="tl-org">事業会社</p></div>
+          <div class="tl-role-row"><p class="tl-role">マーケター</p></div>
+          <p class="tl-desc">ただ卒業後、半年間ひとりで継続する中で「ひとりでビジネスをすることの退屈さ」を感じ、事業会社にてマーケターとして活動を開始。以来、広告運用・SNS運用・LP制作・CRMを横断しながら、複数のブランド・事業のマーケティング戦略〜実行を担っています。</p>
+        </div>
+      </li>
+      <li class="tl-item fx">
+        <div class="tl-period"><span class="tl-when">2026年2月 〜</span></div>
+        <div class="tl-logo tone-c1" aria-hidden="true"><svg class="ic"><use href="#ic-meme"></use></svg></div>
+        <div class="tl-body">
+          <div class="tl-org-row"><p class="tl-org"><a href="https://llcmeme.com/" target="_blank" rel="noopener">合同会社Meme</a></p><span class="chip green">現在の所属</span></div>
+          <div class="tl-role-row"><p class="tl-role">WEBマーケター</p><span class="chip">業務委託（現在稼働なし）</span></div>
+          <p class="tl-desc">toBマーケ支援事業＋インフルエンサーマーケ事業部にフルコミット。創業からジョインし、2026年2月からパートナー契約（外注先関係）へ移行。</p>
+        </div>
+      </li>
+      <li class="tl-item fx">
+        <div class="tl-period"><span class="tl-when">2026年2月 〜</span></div>
+        <div class="tl-logo tone-c4" aria-hidden="true"><svg class="ic"><use href="#ic-wakaru"></use></svg></div>
+        <div class="tl-body">
+          <div class="tl-org-row"><p class="tl-org"><a href="https://wakaru.biz/" target="_blank" rel="noopener">wakaru株式会社</a></p><span class="chip green">現在の所属</span></div>
+          <div class="tl-role-row"><p class="tl-role">広告ディレクター</p><span class="chip">業務委託（現在稼働なし）</span></div>
+          <p class="tl-desc">広告事業部の立ち上げ／ディレクション支援。</p>
+        </div>
+      </li>
+    </ol>
+    <p class="note tl-note fx">※ 合同会社Meme・wakaru株式会社は、どちらも業務委託・時給稼働体制（現在稼働なし）</p>
   </section>
 
   <!-- ============ 02 業務内容 ============ -->
@@ -1894,8 +2043,9 @@ html:not(.js) .crumbs{ display:none; }
       fx.forEach(function (el) { io.observe(el); });
       viz.forEach(function (el) { io.observe(el); });
     } else {
-      fx.forEach(function (el) { el.classList.add('in'); });
-      viz.forEach(revealViz);
+      /* IO非対応環境：DOMContentLoaded中の一括付与＝初回描画前。凍結防止に .in-set 併用 */
+      fx.forEach(function (el) { el.classList.add('in-set'); el.classList.add('in'); });
+      viz.forEach(function (el) { el.classList.add('in-set'); revealViz(el); });
     }
 
     /* =====================================================
@@ -1948,6 +2098,10 @@ html:not(.js) .crumbs{ display:none; }
     function revealWithin(root) {
       root.querySelectorAll('.fx, .viz').forEach(function (el) {
         if (el.closest('[hidden]')) return;
+        /* .in-set＝トランジション無効の即時完成。ハッシュ直リンク時（対象ビューが
+           一度も hidden になっていない）に初回描画前のトランジションが開始・凍結し、
+           brightness(0) のまま本文が黒く残るのを防ぐ（CSS側の .fx.in-set 参照） */
+        el.classList.add('in-set');
         if (el.classList.contains('viz')) revealViz(el);
         else el.classList.add('in');
       });
@@ -2035,8 +2189,9 @@ html:not(.js) .crumbs{ display:none; }
       return h ? h.textContent : '';
     }
     function revealArticleViz(article) {
-      /* 詳細ビューを開いた瞬間に図解を完成状態で見せる（スクロール待ちにしない） */
-      article.querySelectorAll('.viz').forEach(revealViz);
+      /* 詳細ビューを開いた瞬間に図解を完成状態で見せる（スクロール待ちにしない）。
+         #work-xxx ハッシュ直リンク時のトランジション凍結防止に .in-set も併用 */
+      article.querySelectorAll('.viz').forEach(function (el) { el.classList.add('in-set'); revealViz(el); });
     }
     function resetWorksStage() {
       hidePanel(worksDetailPanel);
