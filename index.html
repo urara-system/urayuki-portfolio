@@ -465,10 +465,41 @@ html.webgl .world .neural{ display:none; }
 
 .hero-inner{
   max-width:900px; margin:0 auto; position:relative;
-  padding:clamp(2.8rem,8vw,5.2rem) clamp(1.1rem,4vw,2rem) clamp(2.6rem,6vw,4rem);
-  display:grid; grid-template-columns:1fr; gap:clamp(1.6rem,4vw,3rem);
+  padding:clamp(2rem,6vw,3.4rem) clamp(1.1rem,4vw,2rem) clamp(1.6rem,4vw,2.4rem);
+  display:grid; grid-template-columns:1fr; gap:clamp(1rem,3vw,1.8rem);
   align-items:start;
-  min-height:clamp(280px,50vh,520px);
+}
+/* ホームだけは、ナビゲーションカードの箱に閉じ込めず、画面幅いっぱいまで使う（世界観が外に広がる印象を作る） */
+#home .hero-inner, #home .home-nav-block.wrap{ max-width:1220px; }
+
+/* ---------- コアグロース図：核→分岐→輪→結実→伝播（マーケ思考の世界観） ---------- */
+.core-growth-wrap{ max-width:460px; margin:0 auto; }
+.core-growth-wrap svg{ width:100%; height:auto; display:block; overflow:visible; }
+.cg-branch{ fill:none; stroke:rgba(79,216,232,0.4); stroke-width:1.4; vector-effect:non-scaling-stroke; }
+.cg-ring{ fill:none; stroke:rgba(79,216,232,0.5); stroke-width:1.6; vector-effect:non-scaling-stroke; }
+.cg-core{
+  fill:var(--synapse); filter:drop-shadow(0 0 10px rgba(79,216,232,0.9));
+  transform-box:fill-box; transform-origin:center;
+  animation:cgPulse 3.2s ease-in-out infinite;
+}
+.cg-node{ fill:var(--void); stroke:var(--synapse); stroke-width:1.3; vector-effect:non-scaling-stroke; }
+.cg-fruit{
+  fill:#ffb454; filter:drop-shadow(0 0 12px rgba(255,180,84,0.85));
+  transform-box:fill-box; transform-origin:center;
+  animation:cgPulse 2.6s ease-in-out infinite;
+}
+.cg-ripple{
+  fill:none; stroke:#ffb454; stroke-width:1.4; opacity:0;
+  transform-box:fill-box; transform-origin:center;
+  animation:cgRipple 3.6s ease-out infinite;
+}
+.cg-label{ font-family:var(--font-mono); font-size:12px; font-weight:600; letter-spacing:0.03em; fill:var(--ink-faint); }
+@keyframes cgPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.22); } }
+@keyframes cgRipple{ 0%{ opacity:0.65; transform:scale(0.3); } 75%{ opacity:0; } 100%{ opacity:0; transform:scale(1); } }
+@media (prefers-reduced-motion: reduce){ .cg-core, .cg-fruit, .cg-ripple{ animation:none; } }
+.core-growth-caption{
+  max-width:32em; margin:0 auto; text-align:center;
+  font-size:0.78rem; line-height:1.9; color:var(--ink-faint);
 }
 /* グリッドアイテムは既定でmin-width:autoのため、長いテキストが折り返さずトラックを押し広げる
    （いわゆるgrid blowout）。明示的に0にして必ずコンテナ幅で折り返させる。 */
@@ -624,7 +655,9 @@ html.webgl .world .neural{ display:none; }
 .fold .fold-body .pills{ margin-top:0.9rem; }
 
 /* ---------- layout / views ---------- */
-.wrap{ max-width:900px; margin:0 auto; padding-left:clamp(1.1rem,4vw,2rem); padding-right:clamp(1.1rem,4vw,2rem); }
+.wrap{ max-width:1100px; margin:0 auto; padding-left:clamp(1.1rem,4vw,2rem); padding-right:clamp(1.1rem,4vw,2rem); }
+/* 幅を広げた分、長文の行長だけは読みやすい実測値に留める（カード・図版はそのまま画面幅を使う） */
+.tl-desc, .work-detail > p, .work-detail > ul{ max-width:46em; }
 .view{ scroll-margin-top:4.5rem; }
 .view.sec{ padding-bottom:clamp(2.4rem,5vw,3.6rem); }
 /* JS無効時は全ビューが縦に展開表示されるため、機能しないパンくず／戻るボタンは隠す */
@@ -1293,6 +1326,55 @@ html:not(.js) .crumbs{ display:none; }
         <div>
           <p class="kicker">CAREER PORTFOLIO — MARKETING / GROWTH PARTNER</p>
         </div>
+        <div class="core-growth-wrap viz">
+          <svg viewBox="0 0 800 800" role="img" aria-label="1つの核となる思考が分岐し、大きな輪となり、結実した成果が周囲へ伝わっていく様子を表した図">
+            <line class="cg-branch anim-draw" x1="400" y1="400" x2="400" y2="290" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.1s"/>
+            <line class="cg-branch anim-draw" x1="400" y1="400" x2="495" y2="345" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.15s"/>
+            <line class="cg-branch anim-draw" x1="400" y1="400" x2="495" y2="455" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.2s"/>
+            <line class="cg-branch anim-draw" x1="400" y1="400" x2="400" y2="510" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.25s"/>
+            <line class="cg-branch anim-draw" x1="400" y1="400" x2="305" y2="455" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.3s"/>
+            <line class="cg-branch anim-draw" x1="400" y1="400" x2="305" y2="345" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.35s"/>
+
+            <line class="cg-branch anim-draw" x1="400" y1="290" x2="400" y2="170" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.6s"/>
+            <line class="cg-branch anim-draw" x1="495" y1="345" x2="599" y2="285" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.65s"/>
+            <line class="cg-branch anim-draw" x1="495" y1="455" x2="599" y2="515" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.7s"/>
+            <line class="cg-branch anim-draw" x1="400" y1="510" x2="400" y2="630" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.75s"/>
+            <line class="cg-branch anim-draw" x1="305" y1="455" x2="201" y2="515" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.8s"/>
+            <line class="cg-branch anim-draw" x1="305" y1="345" x2="201" y2="285" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.85s"/>
+
+            <circle class="cg-ring anim-draw" cx="400" cy="400" r="230" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:1.2s"/>
+
+            <circle class="cg-node anim-fade" cx="400" cy="290" r="5" style="transition-delay:.5s"/>
+            <circle class="cg-node anim-fade" cx="495" cy="345" r="5" style="transition-delay:.55s"/>
+            <circle class="cg-node anim-fade" cx="495" cy="455" r="5" style="transition-delay:.6s"/>
+            <circle class="cg-node anim-fade" cx="400" cy="510" r="5" style="transition-delay:.65s"/>
+            <circle class="cg-node anim-fade" cx="305" cy="455" r="5" style="transition-delay:.7s"/>
+            <circle class="cg-node anim-fade" cx="305" cy="345" r="5" style="transition-delay:.75s"/>
+
+            <circle class="cg-node anim-fade" cx="599" cy="285" r="5" style="transition-delay:1s"/>
+            <circle class="cg-node anim-fade" cx="400" cy="630" r="5" style="transition-delay:1.05s"/>
+            <circle class="cg-node anim-fade" cx="201" cy="285" r="5" style="transition-delay:1.1s"/>
+
+            <circle class="cg-core anim-fade" cx="400" cy="400" r="8" style="transition-delay:0s"/>
+
+            <g class="anim-fade" style="transition-delay:1.5s">
+              <circle class="cg-ripple" cx="400" cy="170" r="9" style="animation-delay:1.6s"/>
+              <circle class="cg-ripple" cx="400" cy="170" r="9" style="animation-delay:2.8s"/>
+              <circle class="cg-fruit" cx="400" cy="170" r="9"/>
+            </g>
+            <g class="anim-fade" style="transition-delay:1.65s">
+              <circle class="cg-ripple" cx="599" cy="515" r="9" style="animation-delay:2s"/>
+              <circle class="cg-ripple" cx="599" cy="515" r="9" style="animation-delay:3.2s"/>
+              <circle class="cg-fruit" cx="599" cy="515" r="9"/>
+            </g>
+            <g class="anim-fade" style="transition-delay:1.8s">
+              <circle class="cg-ripple" cx="201" cy="515" r="9" style="animation-delay:2.4s"/>
+              <circle class="cg-ripple" cx="201" cy="515" r="9" style="animation-delay:3.6s"/>
+              <circle class="cg-fruit" cx="201" cy="515" r="9"/>
+            </g>
+          </svg>
+        </div>
+        <p class="core-growth-caption">核となる想いが分岐し、大きな輪になる。結実した成果は、周りの人へと伝わっていく。</p>
       </div>
     </section>
 
