@@ -472,31 +472,12 @@ html.webgl .world .neural{ display:none; }
 /* ホームだけは、ナビゲーションカードの箱に閉じ込めず、画面幅いっぱいまで使う（世界観が外に広がる印象を作る） */
 #home .hero-inner, #home .home-nav-block.wrap{ max-width:1220px; }
 
-/* ---------- コアグロース図：核→分岐→輪→結実→伝播（マーケ思考の世界観） ---------- */
+/* ---------- コアグロース図：核→分岐→輪→結実→伝播（マーケ思考の世界観）
+   Three.js（CDN・ES module）による立体版。実装は末尾の <script type="module"> 参照。
+   canvas は透過背景で、ヒーローの暗い背景・装飾レイヤーがそのまま透ける。 ---------- */
 .core-growth-wrap{ max-width:460px; margin:0 auto; }
-.core-growth-wrap svg{ width:100%; height:auto; display:block; overflow:visible; }
-.cg-branch{ fill:none; stroke:rgba(79,216,232,0.4); stroke-width:1.4; vector-effect:non-scaling-stroke; }
-.cg-ring{ fill:none; stroke:rgba(79,216,232,0.5); stroke-width:1.6; vector-effect:non-scaling-stroke; }
-.cg-core{
-  fill:var(--synapse); filter:drop-shadow(0 0 10px rgba(79,216,232,0.9));
-  transform-box:fill-box; transform-origin:center;
-  animation:cgPulse 3.2s ease-in-out infinite;
-}
-.cg-node{ fill:var(--void); stroke:var(--synapse); stroke-width:1.3; vector-effect:non-scaling-stroke; }
-.cg-fruit{
-  fill:#ffb454; filter:drop-shadow(0 0 12px rgba(255,180,84,0.85));
-  transform-box:fill-box; transform-origin:center;
-  animation:cgPulse 2.6s ease-in-out infinite;
-}
-.cg-ripple{
-  fill:none; stroke:#ffb454; stroke-width:1.4; opacity:0;
-  transform-box:fill-box; transform-origin:center;
-  animation:cgRipple 3.6s ease-out infinite;
-}
-.cg-label{ font-family:var(--font-mono); font-size:12px; font-weight:600; letter-spacing:0.03em; fill:var(--ink-faint); }
-@keyframes cgPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.22); } }
-@keyframes cgRipple{ 0%{ opacity:0.65; transform:scale(0.3); } 75%{ opacity:0; } 100%{ opacity:0; transform:scale(1); } }
-@media (prefers-reduced-motion: reduce){ .cg-core, .cg-fruit, .cg-ripple{ animation:none; } }
+.cg3d{ position:relative; width:100%; aspect-ratio:1/1; }
+.cg3d canvas{ display:block; width:100%; height:100%; }
 .core-growth-caption{
   max-width:32em; margin:0 auto; text-align:center;
   font-size:0.78rem; line-height:1.9; color:var(--ink-faint);
@@ -1327,52 +1308,7 @@ html:not(.js) .crumbs{ display:none; }
           <p class="kicker">CAREER PORTFOLIO — MARKETING / GROWTH PARTNER</p>
         </div>
         <div class="core-growth-wrap viz">
-          <svg viewBox="0 0 800 800" role="img" aria-label="1つの核となる思考が分岐し、大きな輪となり、結実した成果が周囲へ伝わっていく様子を表した図">
-            <line class="cg-branch anim-draw" x1="400" y1="400" x2="400" y2="290" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.1s"/>
-            <line class="cg-branch anim-draw" x1="400" y1="400" x2="495" y2="345" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.15s"/>
-            <line class="cg-branch anim-draw" x1="400" y1="400" x2="495" y2="455" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.2s"/>
-            <line class="cg-branch anim-draw" x1="400" y1="400" x2="400" y2="510" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.25s"/>
-            <line class="cg-branch anim-draw" x1="400" y1="400" x2="305" y2="455" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.3s"/>
-            <line class="cg-branch anim-draw" x1="400" y1="400" x2="305" y2="345" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.35s"/>
-
-            <line class="cg-branch anim-draw" x1="400" y1="290" x2="400" y2="170" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.6s"/>
-            <line class="cg-branch anim-draw" x1="495" y1="345" x2="599" y2="285" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.65s"/>
-            <line class="cg-branch anim-draw" x1="495" y1="455" x2="599" y2="515" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.7s"/>
-            <line class="cg-branch anim-draw" x1="400" y1="510" x2="400" y2="630" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.75s"/>
-            <line class="cg-branch anim-draw" x1="305" y1="455" x2="201" y2="515" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.8s"/>
-            <line class="cg-branch anim-draw" x1="305" y1="345" x2="201" y2="285" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:.85s"/>
-
-            <circle class="cg-ring anim-draw" cx="400" cy="400" r="230" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" style="transition-delay:1.2s"/>
-
-            <circle class="cg-node anim-fade" cx="400" cy="290" r="5" style="transition-delay:.5s"/>
-            <circle class="cg-node anim-fade" cx="495" cy="345" r="5" style="transition-delay:.55s"/>
-            <circle class="cg-node anim-fade" cx="495" cy="455" r="5" style="transition-delay:.6s"/>
-            <circle class="cg-node anim-fade" cx="400" cy="510" r="5" style="transition-delay:.65s"/>
-            <circle class="cg-node anim-fade" cx="305" cy="455" r="5" style="transition-delay:.7s"/>
-            <circle class="cg-node anim-fade" cx="305" cy="345" r="5" style="transition-delay:.75s"/>
-
-            <circle class="cg-node anim-fade" cx="599" cy="285" r="5" style="transition-delay:1s"/>
-            <circle class="cg-node anim-fade" cx="400" cy="630" r="5" style="transition-delay:1.05s"/>
-            <circle class="cg-node anim-fade" cx="201" cy="285" r="5" style="transition-delay:1.1s"/>
-
-            <circle class="cg-core anim-fade" cx="400" cy="400" r="8" style="transition-delay:0s"/>
-
-            <g class="anim-fade" style="transition-delay:1.5s">
-              <circle class="cg-ripple" cx="400" cy="170" r="9" style="animation-delay:1.6s"/>
-              <circle class="cg-ripple" cx="400" cy="170" r="9" style="animation-delay:2.8s"/>
-              <circle class="cg-fruit" cx="400" cy="170" r="9"/>
-            </g>
-            <g class="anim-fade" style="transition-delay:1.65s">
-              <circle class="cg-ripple" cx="599" cy="515" r="9" style="animation-delay:2s"/>
-              <circle class="cg-ripple" cx="599" cy="515" r="9" style="animation-delay:3.2s"/>
-              <circle class="cg-fruit" cx="599" cy="515" r="9"/>
-            </g>
-            <g class="anim-fade" style="transition-delay:1.8s">
-              <circle class="cg-ripple" cx="201" cy="515" r="9" style="animation-delay:2.4s"/>
-              <circle class="cg-ripple" cx="201" cy="515" r="9" style="animation-delay:3.6s"/>
-              <circle class="cg-fruit" cx="201" cy="515" r="9"/>
-            </g>
-          </svg>
+          <div class="cg3d" id="cg3d" role="img" aria-label="1つの核となる思考が3次元空間で2段階に分岐しながら大きな球状の輪となり、複数の場所で結実した成果が波紋となって周囲へ伝わっていく様子を表した立体図"></div>
         </div>
         <p class="core-growth-caption">核となる想いが分岐し、大きな輪になる。結実した成果は、周りの人へと伝わっていく。</p>
       </div>
@@ -3938,4 +3874,255 @@ html:not(.js) .crumbs{ display:none; }
   if (!startWebGL()) startNeural2D();
 })();
 
+</script>
+
+<!-- =====================================================
+     コアグロース図（ヒーロー）の立体版
+     - Three.js を CDN から ES module として読み込む（ビルド不要）
+     - 構造は旧2D版と同じメタファー：核(1)→第1世代分岐(6・正八面体の6方向)
+       →第2世代分岐(12)→外殻(半径R3の球面上の12点＋大円リング3本)
+       →うち6点が「結実」(琥珀色)し、波紋リングが外へ広がる
+     - 透過背景・自動回転(約38秒/周)・マウス追従の微小パララックス
+     - prefers-reduced-motion: reduce では回転・脈動・波紋を止め静止画を描画
+     - タブ非表示時／他ビュー表示時（portfolio:viewイベント）はループ停止
+     ===================================================== -->
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.169.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+(function () {
+  'use strict';
+  var host = document.getElementById('cg3d');
+  if (!host) return;
+
+  var renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
+  } catch (e) { return; /* WebGL不可の環境では何も描かない（キャプションは残る） */ }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setClearColor(0x000000, 0); /* 透過：ヒーロー背景が透ける */
+  host.appendChild(renderer.domElement);
+
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var CYAN = 0x4fd8e8;        /* --synapse */
+  var CYAN_BRIGHT = 0x8beaf5; /* --synapse-bright */
+  var AMBER = 0xffb454;       /* 結実＝成果の色（この意味専用） */
+  var R1 = 3.4, R2 = 6.2, R3 = 9;
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+  camera.position.set(0, 0, 30);
+
+  /* pivot＝傾き＋パララックス、spin＝連続自動回転 */
+  var pivot = new THREE.Group();
+  var spin = new THREE.Group();
+  pivot.add(spin);
+  scene.add(pivot);
+  var BASE_TILT_X = 0.42, BASE_TILT_Z = 0.10;
+  pivot.rotation.set(BASE_TILT_X, 0, BASE_TILT_Z);
+
+  /* 発光スプライト用のラジアルグラデーションテクスチャ（ポストプロセス無しの簡易グロー） */
+  var glowCanvas = document.createElement('canvas');
+  glowCanvas.width = glowCanvas.height = 64;
+  var gctx = glowCanvas.getContext('2d');
+  var grad = gctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,0.9)');
+  grad.addColorStop(0.35, 'rgba(255,255,255,0.28)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  gctx.fillStyle = grad;
+  gctx.fillRect(0, 0, 64, 64);
+  var glowTx = new THREE.CanvasTexture(glowCanvas);
+
+  /* 出現シーケンス（旧2D版の draw-on 順序を踏襲：核→世代1→世代2→外殻→結実） */
+  var T_CORE = 0.15, T_G1 = 0.55, T_G2 = 1.05, T_G3 = 1.55, T_RING = 1.9, T_FRUIT = 2.3;
+  var FADE_DUR = 0.9;
+  var fades = [];
+  function fadeMat(mat, target, start) {
+    mat.transparent = true;
+    mat.opacity = reduced ? target : 0;
+    fades.push({ mat: mat, target: target, start: start });
+    return mat;
+  }
+
+  /* ---- 構造の計算：正八面体の6方向 → 各先端で2分岐 → 球面(R3)へ到達 ---- */
+  var dirs1 = [
+    new THREE.Vector3(1, 0, 0), new THREE.Vector3(-1, 0, 0),
+    new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0),
+    new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, -1)
+  ];
+  var seg1 = [], seg2 = [], seg3 = [];
+  var tips1 = [], tips2 = [], tips3 = [];
+  dirs1.forEach(function (d, i) {
+    var p1 = d.clone().multiplyScalar(R1);
+    tips1.push(p1);
+    seg1.push(new THREE.Vector3(0, 0, 0), p1);
+    var ref = Math.abs(d.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+    var u = new THREE.Vector3().crossVectors(d, ref).normalize();
+    var v = new THREE.Vector3().crossVectors(d, u).normalize();
+    var phi = i * 1.13; /* 分岐面の向きを枝ごとに変えて有機的に見せる */
+    var axis = u.clone().multiplyScalar(Math.cos(phi)).addScaledVector(v, Math.sin(phi)).normalize();
+    [1, -1].forEach(function (s) {
+      var d2 = d.clone().applyAxisAngle(axis, s * 0.42).normalize();
+      var p2 = d2.clone().multiplyScalar(R2);
+      tips2.push(p2);
+      seg2.push(p1.clone(), p2);
+      var d3 = d2.clone().applyAxisAngle(axis, s * 0.16).normalize();
+      var p3 = d3.clone().multiplyScalar(R3);
+      tips3.push(p3);
+      seg3.push(p2.clone(), p3);
+    });
+  });
+
+  function addLines(pts, opacity, start) {
+    var geo = new THREE.BufferGeometry().setFromPoints(pts);
+    var mat = fadeMat(new THREE.LineBasicMaterial({ color: CYAN }), opacity, start);
+    spin.add(new THREE.LineSegments(geo, mat));
+  }
+  addLines(seg1, 0.5, T_G1);
+  addLines(seg2, 0.42, T_G2);
+  addLines(seg3, 0.35, T_G3);
+
+  /* 外殻を示す大円リング3本（直交配置） */
+  var ringPts = [];
+  for (var ri = 0; ri <= 128; ri++) {
+    var a = ri / 128 * Math.PI * 2;
+    ringPts.push(new THREE.Vector3(Math.cos(a) * R3, 0, Math.sin(a) * R3));
+  }
+  var ringGeo = new THREE.BufferGeometry().setFromPoints(ringPts);
+  var ringMat = fadeMat(new THREE.LineBasicMaterial({ color: CYAN }), 0.28, T_RING);
+  [[0, 0, 0], [Math.PI / 2, 0, 0], [0, 0, Math.PI / 2]].forEach(function (r) {
+    var ring = new THREE.Line(ringGeo, ringMat);
+    ring.rotation.set(r[0], r[1], r[2]);
+    spin.add(ring);
+  });
+
+  /* ノード（球）。ジオメトリは共有し scale で大きさを変える */
+  var nodeGeo = new THREE.SphereGeometry(1, 12, 10);
+  function addNodes(tips, radius, opacity, start) {
+    var mat = fadeMat(new THREE.MeshBasicMaterial({ color: CYAN }), opacity, start);
+    tips.forEach(function (p) {
+      var m = new THREE.Mesh(nodeGeo, mat);
+      m.scale.setScalar(radius);
+      m.position.copy(p);
+      spin.add(m);
+    });
+  }
+  addNodes(tips1, 0.16, 0.95, T_G1 + 0.2);
+  addNodes(tips2, 0.12, 0.9, T_G2 + 0.2);
+  addNodes(tips3.filter(function (_, i) { return i % 2 === 1; }), 0.13, 0.9, T_G3 + 0.2);
+
+  /* 核：シアンの球＋加算合成グロー、脈動 */
+  var coreMat = fadeMat(new THREE.MeshBasicMaterial({ color: CYAN_BRIGHT }), 1, T_CORE);
+  var core = new THREE.Mesh(nodeGeo, coreMat);
+  core.scale.setScalar(0.5);
+  spin.add(core);
+  var coreGlowMat = fadeMat(new THREE.SpriteMaterial({ map: glowTx, color: CYAN, blending: THREE.AdditiveBlending, depthWrite: false }), 0.9, T_CORE);
+  var coreGlow = new THREE.Sprite(coreGlowMat);
+  coreGlow.scale.setScalar(3.4);
+  spin.add(coreGlow);
+
+  /* 結実（外周12点のうち6点）：琥珀の球＋グロー＋外へ広がる波紋リング×2 */
+  var fruitMat = fadeMat(new THREE.MeshBasicMaterial({ color: AMBER }), 1, T_FRUIT);
+  var fruitGlowMat = fadeMat(new THREE.SpriteMaterial({ map: glowTx, color: AMBER, blending: THREE.AdditiveBlending, depthWrite: false }), 0.85, T_FRUIT);
+  var rippleGeo = new THREE.RingGeometry(0.94, 1, 48);
+  var RIPPLE_CYCLE = 3.6;
+  var fruits = [], ripples = [];
+  tips3.filter(function (_, i) { return i % 2 === 0; }).forEach(function (p, i) {
+    var f = new THREE.Mesh(nodeGeo, fruitMat);
+    f.position.copy(p);
+    spin.add(f);
+    var g = new THREE.Sprite(fruitGlowMat);
+    g.position.copy(p);
+    g.scale.setScalar(2.4);
+    spin.add(g);
+    fruits.push({ mesh: f, glow: g, phase: i * 1.05 });
+    for (var j = 0; j < 2; j++) {
+      var rmat = new THREE.MeshBasicMaterial({ color: AMBER, transparent: true, opacity: 0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false });
+      var rm = new THREE.Mesh(rippleGeo, rmat);
+      rm.position.copy(p);
+      rm.lookAt(p.clone().multiplyScalar(2)); /* リング面＝球面の接平面（波紋が外殻に沿って広がる） */
+      spin.add(rm);
+      ripples.push({ mesh: rm, mat: rmat, delay: T_FRUIT + 0.4 + i * 0.35 + j * 1.8 });
+    }
+  });
+
+  /* ---- アニメーション ---- */
+  var t = reduced ? 10 : 0; /* reduce時は出現シーケンス完了状態から静止 */
+  var mouse = { x: 0, y: 0 };
+  if (!reduced) {
+    addEventListener('pointermove', function (e) {
+      mouse.x = (e.clientX / innerWidth) * 2 - 1;
+      mouse.y = (e.clientY / innerHeight) * 2 - 1;
+    }, { passive: true });
+  }
+
+  function smooth(p) { return p <= 0 ? 0 : p >= 1 ? 1 : p * p * (3 - 2 * p); }
+
+  function update(dt) {
+    t += dt;
+    for (var i = 0; i < fades.length; i++) {
+      var f = fades[i];
+      f.mat.opacity = f.target * smooth((t - f.start) / FADE_DUR);
+    }
+    if (!reduced) {
+      spin.rotation.y += dt * (Math.PI * 2 / 38); /* 約38秒で1回転 */
+      var k = Math.min(1, dt * 3);
+      pivot.rotation.x += ((BASE_TILT_X + mouse.y * 0.10) - pivot.rotation.x) * k;
+      pivot.rotation.y += ((mouse.x * 0.12) - pivot.rotation.y) * k;
+      core.scale.setScalar(0.5 * (1 + Math.sin(t * 1.9) * 0.12));
+      coreGlow.scale.setScalar(3.4 * (1 + Math.sin(t * 1.9) * 0.18));
+      fruits.forEach(function (fr) {
+        var s = Math.sin(t * 2.3 + fr.phase);
+        fr.mesh.scale.setScalar(0.3 * (1 + s * 0.18));
+        fr.glow.scale.setScalar(2.4 * (1 + s * 0.22));
+      });
+      ripples.forEach(function (r) {
+        var lt = t - r.delay;
+        if (lt < 0) { r.mat.opacity = 0; return; }
+        var p = (lt % RIPPLE_CYCLE) / RIPPLE_CYCLE;
+        r.mesh.scale.setScalar(0.35 + p * 3.4);
+        r.mat.opacity = 0.55 * (1 - p) * (1 - p);
+      });
+    } else {
+      fruits.forEach(function (fr) { fr.mesh.scale.setScalar(0.3); });
+    }
+  }
+
+  var clock = new THREE.Clock();
+  var raf = 0, running = false, homeVisible = true;
+  function frame() {
+    raf = requestAnimationFrame(frame);
+    update(Math.min(clock.getDelta(), 0.1));
+    renderer.render(scene, camera);
+  }
+  function setRunning(on) {
+    on = on && !reduced;
+    if (on === running) return;
+    running = on;
+    if (on) { clock.getDelta(); raf = requestAnimationFrame(frame); }
+    else cancelAnimationFrame(raf);
+  }
+  /* タブ非表示・ホーム以外のビュー表示中はループ停止（無駄なGPU負荷を避ける） */
+  document.addEventListener('visibilitychange', function () {
+    setRunning(!document.hidden && homeVisible);
+  });
+  document.addEventListener('portfolio:view', function (e) {
+    homeVisible = (e.detail === 'home');
+    setRunning(!document.hidden && homeVisible);
+  });
+
+  function resize() {
+    var w = host.clientWidth || 0;
+    if (!w) return;
+    renderer.setSize(w, w, false);
+    if (!running) { update(0); renderer.render(scene, camera); } /* reduce時・停止時も静止画は最新に */
+  }
+  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(host);
+  else addEventListener('resize', resize);
+  resize();
+  setRunning(!document.hidden);
+})();
 </script>
