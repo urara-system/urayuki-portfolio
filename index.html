@@ -100,6 +100,9 @@
   --synapse-soft:rgba(79,216,232,0.10);
   --axon:#6C7CFF;
   --axon-soft:rgba(108,124,255,0.12);
+  /* 「結実＝成果・実績」専用の琥珀（ヒーロー立体図の結実ノードと同義。他用途に使わない） */
+  --fruit:#ffb454;
+  --fruit-soft:rgba(255,180,84,0.12);
   /* チャート/データ用（色覚多様性を考慮し明度差で判別可能な寒色4色） */
   --c1:#4FD8E8; /* cyan */
   --c2:#5B9BFF; /* blue */
@@ -361,6 +364,44 @@ button{
 
 .stitch-line{ height:1px; background-image:var(--trace); opacity:.5; border:none; margin:2.6rem 0; }
 
+/* ---------- ツールスタック：カテゴリ別アイコンタイル（線画アイコン＋ツール名チップ） ----------
+   実在ブランドロゴは使わない。icon-defs の抽象線画（.ic）＋tone-c*カラーで
+   「そのツールが何をするものか」を表す。名称はテキストラベルとして残す。 */
+.tool-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0.85rem; margin:0.9rem 0 0.2rem; }
+@media (max-width:800px){ .tool-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:520px){ .tool-grid{ grid-template-columns:1fr; } }
+.tool-tile{
+  border:1px solid var(--line); border-radius:10px;
+  background-color:var(--cell);
+  background-image:linear-gradient(160deg, var(--cell-2) 0%, var(--cell) 45%);
+  box-shadow:var(--shadow);
+  padding:0.85rem 0.95rem 0.9rem;
+}
+.tool-tile .tt-head{ display:flex; align-items:center; gap:0.7rem; }
+.tool-tile .tt-icon{
+  flex-shrink:0; width:42px; height:42px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:
+    radial-gradient(70% 70% at 50% 35%, rgba(79,216,232,0.12) 0%, transparent 75%),
+    var(--void-2);
+  border:1px solid var(--line);
+}
+.tool-tile .tt-icon svg{ width:26px; height:auto; filter:drop-shadow(0 0 8px currentColor); }
+.tool-tile .tt-cat{ margin:0; font-family:var(--font-sans); font-weight:700; font-size:0.85rem; letter-spacing:0.03em; }
+.tool-tile .tt-names{ display:flex; flex-wrap:wrap; gap:0.3rem; margin-top:0.7rem; }
+.tool-tile .tt-names i{
+  font-style:normal; font-size:0.66rem; font-weight:600; color:var(--ink-soft);
+  border:1px solid var(--line); border-radius:999px; padding:0.04rem 0.55rem;
+  background:rgba(233,238,247,0.02); line-height:1.8;
+}
+
+/* ---------- チャネルファネル：積層カード（手前＝認知、奥＝購入後・継続） ----------
+   斜めにずらして重ねた角丸スクエアの束。手前ほど鮮明・奥ほど減衰し、
+   「4チャネルをファネル順に一気通貫で担える」ことを1枚で伝える。 */
+.funnel-stack-svg .fs-card{ fill:rgba(14,20,32,0.94); stroke:var(--synapse); }
+.funnel-stack-svg .fs-name{ font-family:var(--font-sans); font-weight:700; font-size:16px; letter-spacing:0.04em; fill:var(--ink); }
+.funnel-stack-svg text{ pointer-events:none; }
+
 /* ---------- world（全ビュー共通の固定背景レイヤー） ----------
    ヒーロー限定だった方眼・グロー・細胞質ブロブを viewport 固定で全画面に展開。
    どのビューを開いても・どこまでスクロールしても同じ世界が続く。
@@ -453,9 +494,13 @@ html.webgl .world .neural{ display:none; }
     radial-gradient(circle 320px at var(--wx,50%) var(--wy,40%), rgba(79,216,232,0.16) 0%, rgba(108,124,255,0.10) 45%, transparent 72%);
 }
 
-/* ---------- hero ---------- */
+/* ---------- hero（フルブリード：3D構造がヒーローの主役） ----------
+   .cg3d ＝ hero 全面に absolute 配置した Three.js キャンバスレイヤー（透過）。
+   キッカー／タイトル／リード／キャプションはその上（z-index:2）に重なり、
+   立体構造は広い画面では中央やや右へオフセット（JS側でアスペクト比から算出）。
+   キャンバスは背後の .world（方眼・粒子）と透けて連続した1つの世界になる。 */
 .hero{ position:relative; overflow:hidden; isolation:isolate; border-bottom:1px solid var(--line-soft); }
-.amb{ position:absolute; inset:0; z-index:-1; overflow:hidden; pointer-events:none; }
+.amb{ position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
 .amb span{
   position:absolute; font-family:var(--font-sans); font-weight:600; white-space:nowrap;
   color:var(--synapse); opacity:0.07; letter-spacing:0.3em; font-size:0.95rem;
@@ -463,49 +508,57 @@ html.webgl .world .neural{ display:none; }
 }
 @media (max-width:640px){ .amb{ display:none; } }
 
-.hero-inner{
-  max-width:900px; margin:0 auto; position:relative;
-  padding:clamp(2rem,6vw,3.4rem) clamp(1.1rem,4vw,2rem) clamp(1.6rem,4vw,2.4rem);
-  display:grid; grid-template-columns:1fr; gap:clamp(1rem,3vw,1.8rem);
-  align-items:start;
-}
-/* ホームだけは、ナビゲーションカードの箱に閉じ込めず、画面幅いっぱいまで使う（世界観が外に広がる印象を作る） */
-#home .hero-inner, #home .home-nav-block.wrap{ max-width:1220px; }
-
 /* ---------- コアグロース図：核→分岐→輪→結実→伝播（マーケ思考の世界観）
    Three.js（CDN・ES module）による立体版。実装は末尾の <script type="module"> 参照。
-   canvas は透過背景で、ヒーローの暗い背景・装飾レイヤーがそのまま透ける。 ---------- */
-.core-growth-wrap{ max-width:460px; margin:0 auto; }
-.cg3d{ position:relative; width:100%; aspect-ratio:1/1; }
+   Three.js が読み込めない／WebGL不可の環境では、JSが同じモチーフの静的SVGを
+   ここへ描画する（真っ白・真っ黒の空白は構造的に発生させない）。 ---------- */
+.cg3d{ position:absolute; inset:0; z-index:0; pointer-events:none; }
 .cg3d canvas{ display:block; width:100%; height:100%; }
-.core-growth-caption{
-  max-width:32em; margin:0 auto; text-align:center;
-  font-size:0.78rem; line-height:1.9; color:var(--ink-faint);
+.cg3d .cg3d-fallback{ display:block; width:min(72vh,86%); height:auto; margin:0 auto; position:relative; top:50%; transform:translateY(-50%); opacity:0.85; }
+/* テキスト可読性スクリム：本文が載る左側・下端だけ僅かに暗くする（構造の主役感は保つ） */
+.hero-scrim{
+  position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:
+    linear-gradient(97deg, rgba(5,7,12,0.68) 0%, rgba(5,7,12,0.3) 38%, transparent 64%),
+    linear-gradient(180deg, transparent 58%, rgba(5,7,12,0.52) 100%);
 }
-/* グリッドアイテムは既定でmin-width:autoのため、長いテキストが折り返さずトラックを押し広げる
-   （いわゆるgrid blowout）。明示的に0にして必ずコンテナ幅で折り返させる。 */
+@media (max-width:760px){
+  .hero-scrim{ background:linear-gradient(180deg, rgba(5,7,12,0.38) 0%, transparent 32%, transparent 56%, rgba(5,7,12,0.66) 100%); }
+}
+.hero-inner{
+  position:relative; z-index:2; width:100%;
+  max-width:1220px; margin:0 auto;
+  min-height:calc(94vh - 3.4rem);
+  min-height:calc(94svh - 3.4rem);
+  padding:clamp(1.8rem,4.5vh,3rem) clamp(1.1rem,4vw,2rem) clamp(1.5rem,3.5vh,2.2rem);
+  display:flex; flex-direction:column; align-items:flex-start;
+}
 .hero-inner > *{ min-width:0; }
+/* ホームだけは、ナビゲーションカードの箱に閉じ込めず、画面幅いっぱいまで使う（世界観が外に広がる印象を作る） */
+#home .hero-inner, #home .home-nav-block.wrap{ max-width:1220px; }
 .hero-title{
-  margin:1rem 0 0; color:var(--ink); font-family:var(--font-sans);
-  font-size:clamp(1.9rem,5.4vw,2.9rem);
-  font-weight:700; line-height:1.4; letter-spacing:0.06em;
-  text-shadow:0 0 60px rgba(76,102,245,0.45);
+  margin:auto 0 0; color:var(--ink); font-family:var(--font-sans);
+  font-size:clamp(1.95rem,4.6vw,3.3rem); max-width:15em;
+  font-weight:700; line-height:1.5; letter-spacing:0.06em; text-wrap:balance;
+  text-shadow:0 2px 26px rgba(5,7,12,0.9), 0 0 60px rgba(76,102,245,0.45);
 }
 .hero-title .en{
-  display:block; margin-top:0.5rem;
-  font-family:var(--font-mono); font-weight:600; font-size:0.8rem;
-  letter-spacing:0.2em; text-transform:uppercase; color:var(--ink-faint);
+  display:block; margin-top:0.9rem;
+  font-family:var(--font-mono); font-weight:600; font-size:0.78rem;
+  letter-spacing:0.24em; text-transform:uppercase; color:var(--synapse);
 }
-.hero-tagline{
-  position:relative; margin:1.8rem 0 0; max-width:32em;
-  font-family:var(--font-num); font-weight:600; font-size:clamp(1rem,1.9vw,1.15rem);
-  letter-spacing:0.02em;
-  line-height:2; color:var(--ink);
-  padding-left:1.2em;
-  border-left:2px solid var(--axon);
+.hero-lede{ margin:1.4rem 0 0; max-width:36em; font-size:0.94rem; line-height:2.05; color:var(--ink-soft); text-shadow:0 1px 14px rgba(5,7,12,0.9); }
+/* キャプション：琥珀のドット＝立体図の「結実」と同じ意味（成果の色はamber専用） */
+.core-growth-caption{
+  margin:clamp(1.8rem,4.5vh,2.8rem) 0 0;
+  display:inline-flex; align-items:baseline; gap:0.7rem;
+  font-size:0.76rem; line-height:1.9; color:var(--ink-faint);
 }
-.hero-tagline .ja{ display:block; margin-top:0.4rem; font-size:0.86rem; font-weight:400; letter-spacing:0.04em; color:var(--ink-soft); font-family:var(--font-sans); }
-.hero-lede{ margin:1.6rem 0 0; max-width:38em; font-size:0.94rem; line-height:2.05; color:var(--ink-soft); }
+.core-growth-caption::before{
+  content:""; width:0.5rem; height:0.5rem; border-radius:50%; flex-shrink:0;
+  align-self:center;
+  background:var(--fruit); box-shadow:0 0 12px rgba(255,180,84,0.8);
+}
 
 .hero-portrait{
   position:relative; width:168px; border-radius:12px; overflow:hidden;
@@ -822,6 +875,99 @@ html:not(.js) .crumbs{ display:none; }
 .step .step-body{ margin-top:0.55rem; font-size:0.88rem; }
 .step .step-body > :first-child{ margin-top:0; }
 .step .step-body ul{ margin:0.3rem 0; padding-left:1.1em; }
+
+/* ---------- 04 将来：ミッション・原点・ロードマップ・成果の定義 ----------
+   方針：段落の壁ではなく、ミッション（大型タイポ）／原点（2カード）／
+   共通項（収束ダイアグラム）／ロードマップ（.steps拡張）／結実（amberカラウト）
+   の視覚ブロックで構成する。amber は「成果・結実」の意味専用（サイト共通ルール）。 */
+.mission{
+  position:relative; margin:1.8rem 0 0;
+  padding:clamp(1.5rem,4vw,2.4rem) clamp(1.2rem,4vw,2.6rem);
+  border:1px solid var(--line); border-radius:12px;
+  background-color:var(--cell);
+  background-image:
+    radial-gradient(90% 130% at 88% -15%, rgba(76,102,245,0.18) 0%, transparent 62%),
+    linear-gradient(160deg, var(--cell-2) 0%, var(--cell) 45%);
+  box-shadow:var(--shadow);
+}
+.mission::before, .mission::after{ content:""; position:absolute; width:12px; height:12px; pointer-events:none; }
+.mission::before{ top:7px; left:7px; border-top:1px solid rgba(79,216,232,0.4); border-left:1px solid rgba(79,216,232,0.4); }
+.mission::after{ bottom:7px; right:7px; border-bottom:1px solid rgba(79,216,232,0.4); border-right:1px solid rgba(79,216,232,0.4); }
+.mission-label{
+  margin:0; font-family:var(--font-mono); font-weight:600; font-size:0.64rem;
+  letter-spacing:0.26em; text-transform:uppercase; color:var(--synapse);
+}
+.mission blockquote{ margin:1.05rem 0 0; padding:0; }
+.mission blockquote p{
+  margin:0; font-family:var(--font-sans); font-weight:700;
+  font-size:clamp(1.12rem,2.7vw,1.62rem); line-height:2; letter-spacing:0.05em;
+  color:var(--ink); text-wrap:balance;
+}
+.mission blockquote p em{ font-style:normal; color:var(--synapse-bright); text-shadow:0 0 22px rgba(79,216,232,0.5); }
+.mission .mission-note{ margin:1.05rem 0 0; font-size:0.79rem; line-height:1.95; color:var(--ink-soft); max-width:44em; }
+
+.origin-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-top:1.4rem; }
+@media (max-width:680px){ .origin-grid{ grid-template-columns:1fr; } }
+.origin-card{
+  position:relative; border:1px solid var(--line); border-radius:10px;
+  background-color:var(--cell);
+  background-image:linear-gradient(160deg, var(--cell-2) 0%, var(--cell) 45%);
+  box-shadow:var(--shadow); padding:1.1rem 1.2rem 1.15rem;
+}
+.origin-card::before, .origin-card::after{ content:""; position:absolute; width:10px; height:10px; pointer-events:none; }
+.origin-card::before{ top:6px; left:6px; border-top:1px solid rgba(79,216,232,0.35); border-left:1px solid rgba(79,216,232,0.35); }
+.origin-card::after{ bottom:6px; right:6px; border-bottom:1px solid rgba(79,216,232,0.35); border-right:1px solid rgba(79,216,232,0.35); }
+.origin-card .o-no{ font-family:var(--font-mono); font-weight:600; font-size:0.64rem; letter-spacing:0.2em; color:var(--synapse); }
+.origin-card h4{ margin:0.55rem 0 0; font-size:0.99rem; font-weight:700; letter-spacing:0.02em; line-height:1.65; }
+.origin-card p{ margin:0.6rem 0 0; font-size:0.83rem; line-height:1.95; color:var(--ink-soft); }
+.origin-card .o-insight{
+  margin:0.9rem 0 0; padding-top:0.8rem; border-top:1px dashed var(--line);
+  font-size:0.8rem; font-weight:700; line-height:1.9; color:var(--synapse);
+}
+
+/* ロードマップ：既存 .steps を拡張（フェーズチップ＋役割タグ＋引用） */
+.chip.amber{ background:var(--fruit-soft); color:var(--fruit); border-color:rgba(255,180,84,0.3); }
+.future-road{ margin-top:1.4rem; }
+.future-road .step-body p{ margin:0.5rem 0 0; font-size:0.86rem; line-height:2; color:var(--ink-soft); max-width:46em; }
+.future-road .step-quote{
+  margin:0.75rem 0 0; padding:0.1rem 0 0.1rem 0.95rem; max-width:42em;
+  border-left:2px solid rgba(79,216,232,0.5);
+  font-size:0.82rem; line-height:2; color:var(--ink-soft);
+}
+.future-road .role-tags{ display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.7rem; }
+.future-road .role-tags i{
+  font-style:normal; font-size:0.66rem; font-weight:600; color:var(--ink-soft);
+  border:1px solid var(--line); border-radius:999px; padding:0.05rem 0.55rem;
+  background:rgba(233,238,247,0.02); line-height:1.8;
+}
+.future-road .step:last-child .step-no{ background:var(--fruit); box-shadow:0 0 14px rgba(255,180,84,0.45); }
+
+/* 成果の定義（結実）：amberカラウト。左＝言葉、右＝顧客とチームが重なるベン図 */
+.fruit-note{
+  position:relative; margin:1.6rem 0 0;
+  border:1px solid rgba(255,180,84,0.3); border-radius:10px;
+  background:
+    radial-gradient(80% 130% at 92% -20%, rgba(255,180,84,0.10) 0%, transparent 62%),
+    var(--cell);
+  box-shadow:var(--shadow); padding:1.15rem 1.3rem 1.25rem;
+}
+.fruit-note .f-label{
+  margin:0; font-family:var(--font-mono); font-weight:600; font-size:0.62rem;
+  letter-spacing:0.24em; text-transform:uppercase; color:var(--fruit);
+  display:inline-flex; align-items:center; gap:0.55rem;
+}
+.fruit-note .f-label::before{
+  content:""; width:0.5rem; height:0.5rem; border-radius:50%;
+  background:var(--fruit); box-shadow:0 0 12px rgba(255,180,84,0.8);
+}
+.fruit-note .f-body{ display:grid; grid-template-columns:minmax(0,1fr) 168px; gap:0.4rem 1.6rem; align-items:center; }
+@media (max-width:640px){ .fruit-note .f-body{ grid-template-columns:1fr; } .fruit-note .f-venn{ margin:0.6rem auto 0; } }
+.fruit-note .f-quote{
+  margin:0.8rem 0 0; font-family:var(--font-sans); font-weight:700;
+  font-size:clamp(0.95rem,1.9vw,1.08rem); line-height:2.05; color:var(--ink); text-wrap:balance;
+}
+.fruit-note .f-sub{ margin:0.6rem 0 0; font-size:0.79rem; line-height:1.95; color:var(--ink-soft); }
+.fruit-note .f-venn{ width:168px; height:auto; display:block; }
 
 /* ---------- working style（Role/Judgement/Strength 3カード・簡潔版） ---------- */
 .workstyle-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin:1.4rem 0; }
@@ -1278,6 +1424,56 @@ html:not(.js) .crumbs{ display:none; }
     <line x1="67" y1="45" x2="90" y2="45"/>
     <rect x="53" y="40" width="14" height="10" rx="2"/>
   </symbol>
+
+  <!-- ツールスタック用（抽象線画。実在ロゴの模倣はしない・サイト共通の .ic ストローク） -->
+  <!-- 広告運用：メガホン＋電波 -->
+  <symbol id="ic-tool-ads" viewBox="0 0 120 84">
+    <path d="M30 36v12l38 16V20z"/>
+    <path d="M30 36H22a5 5 0 0 0-5 5v2a5 5 0 0 0 5 5h8"/>
+    <path d="M36 50l4 16h9l-4-14"/>
+    <path d="M78 30q6 12 0 24"/>
+    <path d="M88 24q10 18 0 36"/>
+  </symbol>
+  <!-- SNS：スマホ＋ハートのリアクション -->
+  <symbol id="ic-tool-sns" viewBox="0 0 120 84">
+    <rect x="42" y="10" width="36" height="64" rx="7"/>
+    <line x1="54" y1="66" x2="66" y2="66"/>
+    <path d="M60 30.6c-2.1-2.4-6-2.4-7.1.5-1 2.8 1.5 5.2 7.1 9.2 5.6-4 8.1-6.4 7.1-9.2-1.1-2.9-5-2.9-7.1-.5z"/>
+    <circle cx="90" cy="22" r="6"/>
+    <circle cx="27" cy="58" r="6"/>
+  </symbol>
+  <!-- クリエイティブ：フレーム＋ペン先 -->
+  <symbol id="ic-tool-creative" viewBox="0 0 120 84">
+    <rect x="26" y="16" width="52" height="52" rx="7"/>
+    <path d="M40 54l18-18 8 8-18 18h-8z"/>
+    <line x1="58" y1="36" x2="66" y2="44"/>
+    <path d="M86 24h10M91 19v10"/>
+  </symbol>
+  <!-- CRM：2つの吹き出し（対話・シナリオ配信） -->
+  <symbol id="ic-tool-crm" viewBox="0 0 120 84">
+    <path d="M24 20h42a6 6 0 0 1 6 6v16a6 6 0 0 1-6 6H44l-10 9v-9h-10a6 6 0 0 1-6-6V26a6 6 0 0 1 6-6z"/>
+    <path d="M80 34h16a6 6 0 0 1 6 6v12a6 6 0 0 1-6 6h-4v8l-9-8h-3"/>
+    <line x1="34" y1="31" x2="58" y2="31"/>
+    <line x1="34" y1="39" x2="50" y2="39"/>
+  </symbol>
+  <!-- プログラム・自動化：コードブラケット＋歯車の軸 -->
+  <symbol id="ic-tool-code" viewBox="0 0 120 84">
+    <path d="M42 24 26 42l16 18"/>
+    <path d="M78 24l16 18-16 18"/>
+    <line x1="66" y1="20" x2="54" y2="64"/>
+  </symbol>
+  <!-- AI：ノードが結線するミニネットワーク（サイト背景と同じモチーフ） -->
+  <symbol id="ic-tool-ai" viewBox="0 0 120 84">
+    <circle cx="60" cy="42" r="9"/>
+    <circle cx="30" cy="22" r="5"/>
+    <circle cx="92" cy="26" r="5"/>
+    <circle cx="34" cy="64" r="5"/>
+    <circle cx="88" cy="62" r="5"/>
+    <line x1="52" y1="37" x2="35" y2="25"/>
+    <line x1="68" y1="37" x2="87" y2="29"/>
+    <line x1="53" y1="48" x2="38" y2="61"/>
+    <line x1="68" y1="47" x2="83" y2="59"/>
+  </symbol>
 </svg>
 
 <header class="topbar">
@@ -1299,17 +1495,17 @@ html:not(.js) .crumbs{ display:none; }
   <!-- ============ ホーム（ヒーロー＋3枚のナビゲーションカード） ============ -->
   <div class="view" id="home" data-view="home">
     <section class="hero">
+      <!-- 立体コアグロース図：ヒーロー全面を使う主役レイヤー（テキストの背後） -->
+      <div class="cg3d" id="cg3d" role="img" aria-label="1つの核となる思考が3次元空間で2段階に分岐しながら大きな球状の輪となり、複数の場所で結実した成果が波紋となって周囲へ伝わっていく様子を表した立体図"></div>
       <div class="amb" aria-hidden="true">
         <span style="top:8%; left:6%;">挑戦をやめるまでは、失敗ではない</span>
         <span style="top:30%; right:8%;">短期の即効性と中長期の設計</span>
       </div>
+      <div class="hero-scrim" aria-hidden="true"></div>
       <div class="hero-inner hero-load">
-        <div>
-          <p class="kicker">CAREER PORTFOLIO — MARKETING / GROWTH PARTNER</p>
-        </div>
-        <div class="core-growth-wrap viz">
-          <div class="cg3d" id="cg3d" role="img" aria-label="1つの核となる思考が3次元空間で2段階に分岐しながら大きな球状の輪となり、複数の場所で結実した成果が波紋となって周囲へ伝わっていく様子を表した立体図"></div>
-        </div>
+        <p class="kicker">CAREER PORTFOLIO — MARKETING / GROWTH PARTNER</p>
+        <h1 class="hero-title">人の本質的なインサイトを、<br>事業の成果に変える。<span class="en">Yuki Ura — Marketing / Growth Partner</span></h1>
+        <p class="hero-lede">戦略設計・広告・SNS・CRM・LP・データ自動化。チャネル横断の一気通貫で、マーケティングの「判断」と「実行」を同時に担います。</p>
         <p class="core-growth-caption">核となる想いが分岐し、大きな輪になる。結実した成果は、周りの人へと伝わっていく。</p>
       </div>
     </section>
@@ -1352,7 +1548,7 @@ html:not(.js) .crumbs{ display:none; }
         <a class="nav-card" href="#future" data-goto="future">
           <span class="nc-no">04</span>
           <span class="nc-title">将来<span class="nc-en">Future</span></span>
-          <span class="nc-desc">上流の意思決定・チームでの事業成長へ。次のフェーズで目指す方向性。</span>
+          <span class="nc-desc">ミッション・原点・ロードマップ。実行者から、事業の設計者へ——キャリアの設計図。</span>
           <span class="nc-go">開く<span class="arrow">→</span></span>
         </a>
       </nav>
@@ -1529,14 +1725,33 @@ html:not(.js) .crumbs{ display:none; }
         <details class="fold fx">
           <summary><span>ツールスタック</span><span class="hint">Google・Meta・Amazon／Instagram／STUDIO／L-step／GAS ほか</span></summary>
           <div class="fold-body">
-            <ul class="pills tools">
-              <li><b>広告：</b>Google・GTM・GA4、Meta、Amazon</li>
-              <li><b>SNS：</b>Instagram</li>
-              <li><b>クリエイティブ：</b>STUDIO・Canva・CapCut</li>
-              <li><b>CRM：</b>公式LINE・L-step・エルメ・エルグラム</li>
-              <li><b>プログラム：</b>Google Apps Script（Java）、スクレイピング</li>
-              <li><b>AI：</b>Claude Code</li>
-            </ul>
+            <!-- カテゴリ別アイコンタイル（抽象線画。実在ロゴの模倣はしない） -->
+            <div class="tool-grid">
+              <div class="tool-tile">
+                <div class="tt-head"><span class="tt-icon tone-c2" aria-hidden="true"><svg class="ic"><use href="#ic-tool-ads"></use></svg></span><p class="tt-cat">広告</p></div>
+                <div class="tt-names"><i>Google広告</i><i>GTM</i><i>GA4</i><i>Meta広告</i><i>Amazon広告</i></div>
+              </div>
+              <div class="tool-tile">
+                <div class="tt-head"><span class="tt-icon tone-c1" aria-hidden="true"><svg class="ic"><use href="#ic-tool-sns"></use></svg></span><p class="tt-cat">SNS</p></div>
+                <div class="tt-names"><i>Instagram</i></div>
+              </div>
+              <div class="tool-tile">
+                <div class="tt-head"><span class="tt-icon tone-c3" aria-hidden="true"><svg class="ic"><use href="#ic-tool-creative"></use></svg></span><p class="tt-cat">クリエイティブ</p></div>
+                <div class="tt-names"><i>STUDIO</i><i>Canva</i><i>CapCut</i></div>
+              </div>
+              <div class="tool-tile">
+                <div class="tt-head"><span class="tt-icon tone-c4" aria-hidden="true"><svg class="ic"><use href="#ic-tool-crm"></use></svg></span><p class="tt-cat">CRM</p></div>
+                <div class="tt-names"><i>公式LINE</i><i>L-step</i><i>エルメ</i><i>エルグラム</i></div>
+              </div>
+              <div class="tool-tile">
+                <div class="tt-head"><span class="tt-icon tone-c2" aria-hidden="true"><svg class="ic"><use href="#ic-tool-code"></use></svg></span><p class="tt-cat">プログラム</p></div>
+                <div class="tt-names"><i>Google Apps Script（Java）</i><i>スクレイピング</i></div>
+              </div>
+              <div class="tool-tile">
+                <div class="tt-head"><span class="tt-icon tone-c1" aria-hidden="true"><svg class="ic"><use href="#ic-tool-ai"></use></svg></span><p class="tt-cat">AI</p></div>
+                <div class="tt-names"><i>Claude Code</i></div>
+              </div>
+            </div>
           </div>
         </details>
       </div>
@@ -1576,6 +1791,47 @@ html:not(.js) .crumbs{ display:none; }
               <text class="flow-sub" x="520" y="112" text-anchor="middle">PDCAで再設計</text>
             </svg>
             <p class="viz-note">※ 短期の即効性施策と中長期の資産化施策を最初に切り分けてから、実行順序を決める。</p>
+          </div>
+
+          <!-- チャネルファネル積層カード：4チャネルをファネル順に重ねたスタック図
+               （手前＝SNS/認知が最も鮮明、奥へ行くほど減衰＝購入後・継続まで届く） -->
+          <div class="viz-card wide viz">
+            <p class="viz-cap">チャネル横断ファネル：SNS（認知）→ 広告 → LP → LINE／CRM（購入後・継続）</p>
+            <svg class="funnel-stack-svg" viewBox="0 0 560 264" role="img" aria-label="SNS・広告・LP・LINE／CRMの4チャネルをファネル順に重ねた積層カード図。手前の認知段階から奥の購入後・継続段階まで、4チャネルすべてを一気通貫で担当できることを表す">
+              <!-- 奥→手前の順に描画（積層の重なり） -->
+              <g class="anim-fade" style="transition-delay:.05s" opacity="0.4">
+                <rect class="fs-card" x="352" y="22" width="168" height="116" rx="16" stroke="rgba(79,216,232,0.55)" stroke-width="1"/>
+                <text class="vt-sm" x="372" y="50">04</text>
+                <text class="fs-name" x="372" y="78">LINE／CRM</text>
+                <text class="flow-sub" x="372" y="100">購入後・継続</text>
+              </g>
+              <g class="anim-fade" style="transition-delay:.2s" opacity="0.58">
+                <rect class="fs-card" x="246" y="48" width="168" height="116" rx="16" stroke="rgba(79,216,232,0.65)" stroke-width="1"/>
+                <text class="vt-sm" x="266" y="76">03</text>
+                <text class="fs-name" x="266" y="104">LP</text>
+                <text class="flow-sub" x="266" y="126">比較・検討</text>
+              </g>
+              <g class="anim-fade" style="transition-delay:.35s" opacity="0.78">
+                <rect class="fs-card" x="140" y="74" width="168" height="116" rx="16" stroke="rgba(79,216,232,0.8)" stroke-width="1.1"/>
+                <text class="vt-sm" x="160" y="102">02</text>
+                <text class="fs-name" x="160" y="130">広告</text>
+                <text class="flow-sub" x="160" y="152">興味・比較</text>
+              </g>
+              <g class="anim-fade" style="transition-delay:.5s">
+                <rect x="30" y="96" width="176" height="124" rx="16" fill="none" stroke="rgba(139,234,245,0.28)" stroke-width="1"/>
+                <rect class="fs-card" x="34" y="100" width="168" height="116" rx="16" stroke="var(--synapse)" stroke-width="1.5"/>
+                <text class="vt-sm" x="54" y="128">01</text>
+                <text class="fs-name" x="54" y="156">SNS</text>
+                <text class="flow-sub" x="54" y="178">認知</text>
+              </g>
+              <!-- ファネルの向き（手前＝認知 → 奥＝継続） -->
+              <path class="flow-path anim-draw" d="M118 240 H 436" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+              <path d="M436 240l-9-4.5v9z" fill="rgba(79,216,232,0.6)"/>
+              <circle class="syn-dot" cx="0" cy="0" r="2.8" style="offset-path:path('M118 240 H 430'); animation-delay:1.2s;"/>
+              <text class="vt-sm" x="118" y="258">認知</text>
+              <text class="vt-sm" x="436" y="258" text-anchor="end">購入後・継続</text>
+            </svg>
+            <p class="viz-note">※ 手前（認知）から奥（購入後・継続）まで、4チャネルを分業せずに1人で横断して設計・実行する。</p>
           </div>
 
           <details class="fold fx">
@@ -2241,7 +2497,117 @@ html:not(.js) .crumbs{ display:none; }
   <section class="view wrap sec" id="future" data-view="future">
     <nav class="crumbs" aria-label="現在地"><button type="button" class="back-btn" data-goto="home"><svg class="ic" aria-hidden="true"><use href="#i-arrow"></use></svg>ホーム</button><span class="sep">/</span><span class="crumb" aria-current="page">04 将来</span></nav>
     <div class="sec-head"><span class="no">04</span><h2>将来<span class="en">Future</span></h2></div>
-    <p class="sec-lede">個別の施策実行にとどまらず、事業やブランドが生まれる上流の意思決定に、チームとして関わっていきたいと考えています。これまで培ってきた「市場理解を起点とした構造設計」を、より大きな裁量と規模で実現し、有形のブランド・プロダクトを0から育てる仕事に、次のフェーズとして挑戦していきたいと考えています。</p>
+    <p class="sec-lede">個別施策の実行者で終わるつもりはありません。ここに書くのは漠然とした夢ではなく、原点・順番・成果の定義まで言語化した、キャリアの設計図です。</p>
+
+    <!-- ミッション：大型タイポで最重要メッセージに視覚的な重みを与える -->
+    <figure class="mission fx">
+      <figcaption class="mission-label">Life Mission</figcaption>
+      <blockquote>
+        <p>人の本質的なインサイトを捉え、<br>それをもとに<em>誰もが知るサービスや商品</em>を生み出し、<br>世の中に長く残る価値を創造する人になる。</p>
+      </blockquote>
+      <p class="mission-note">目指すのは有名になることではありません。自分が携わり、手がけたサービスが、自分がいなくなった後も世の中に残り続けること——歴史上の人物が教科書に残るような感覚に近い、と思っています。</p>
+    </figure>
+
+    <h3>すべての共通項 — 人間理解 × 事業</h3>
+    <div class="viz-card wide viz">
+      <p class="viz-cap">これまでやってきたことは一見バラバラでも、貫いている軸はひとつ</p>
+      <svg class="flow-svg" viewBox="0 0 560 220" role="img" aria-label="SNSグロース・商品開発・AI・自動化・データ分析の4つの経験が「人間理解×事業」というひとつの軸に収束し、そこから「世の中に長く残る価値」へつながる収束図">
+        <path class="flow-path anim-draw" d="M150 34 C215 34 240 92 274 104" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+        <path class="flow-path anim-draw" d="M150 86 C210 86 235 100 272 108" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+        <path class="flow-path anim-draw" d="M150 138 C210 138 235 124 272 116" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+        <path class="flow-path anim-draw" d="M150 190 C215 190 240 132 274 120" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+        <path class="flow-path anim-draw" d="M346 112 H 444" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+        <circle class="syn-dot" cx="0" cy="0" r="2.8" style="offset-path:path('M150 34 C215 34 240 92 274 104'); animation-delay:0s;"/>
+        <circle class="syn-dot" cx="0" cy="0" r="2.8" style="offset-path:path('M150 190 C215 190 240 132 274 120'); animation-delay:2.2s;"/>
+        <circle class="syn-dot" cx="0" cy="0" r="2.8" style="offset-path:path('M346 112 H 444'); animation-delay:4.4s;"/>
+
+        <g class="anim-fade" style="transition-delay:.05s">
+          <circle class="syn-node" cx="140" cy="34" r="3.4"/><text class="flow-label" x="128" y="38" text-anchor="end">SNSグロース</text>
+          <circle class="syn-node" cx="140" cy="86" r="3.4"/><text class="flow-label" x="128" y="90" text-anchor="end">商品開発</text>
+          <circle class="syn-node" cx="140" cy="138" r="3.4"/><text class="flow-label" x="128" y="142" text-anchor="end">AI・自動化</text>
+          <circle class="syn-node" cx="140" cy="190" r="3.4"/><text class="flow-label" x="128" y="194" text-anchor="end">データ分析</text>
+        </g>
+
+        <g class="anim-fade" style="transition-delay:.35s">
+          <circle cx="310" cy="112" r="36" fill="var(--cell)" stroke="var(--synapse)" stroke-width="1.3"/>
+          <circle cx="310" cy="112" r="42" fill="none" stroke="rgba(79,216,232,0.25)" stroke-width="1" stroke-dasharray="3 5"/>
+          <text class="flow-label" x="310" y="108" text-anchor="middle">人間理解</text>
+          <text class="flow-label" x="310" y="126" text-anchor="middle">× 事業</text>
+        </g>
+
+        <g class="anim-fade" style="transition-delay:.6s">
+          <circle cx="460" cy="112" r="13" fill="none" stroke="rgba(255,180,84,0.4)" stroke-width="1"/>
+          <circle cx="460" cy="112" r="6.5" fill="#ffb454"/>
+          <text class="flow-label" x="460" y="152" text-anchor="middle">世の中に長く残る価値</text>
+          <text class="flow-sub" x="460" y="170" text-anchor="middle">「誰もが知るサービス」へ</text>
+        </g>
+      </svg>
+      <p class="viz-note">※ SNSの数字も、商品も、自動化も——「人についての本当の発見を、スケールする仕組みに変える」ことの別の顔にすぎない。</p>
+    </div>
+
+    <h3>方向を決めた、2つの実体験</h3>
+    <div class="origin-grid">
+      <div class="origin-card fx">
+        <span class="o-no">ORIGIN 01</span>
+        <h4>仮説が、現実に証明される瞬間</h4>
+        <p>いちばん「生きている」と感じるのは、フォロワー数が伸びた瞬間ではありません。データを分析し、「人はこう動くはずだ」と仮説を立て、それが現実の結果で証明された瞬間——「人について、本当のことがひとつ分かった」という手応えこそが原動力です。</p>
+        <p class="o-insight">→ だから憧れるのはカリスマ起業家ではなく、森岡毅氏のような「深い消費者理解をビジネスの成果に翻訳する人」。</p>
+      </div>
+      <div class="origin-card fx">
+        <span class="o-no">ORIGIN 02</span>
+        <h4>1人でやることの、充実感の無さ</h4>
+        <p>かつては独立志向でした。その前提を覆したのが、学生時代に1人で立ち上げ、1人で回したオンライン塾の経験です。事業としては成立していたのに、心は満たされなかった。誰かと成し遂げることにこそ充実感がある——実体験から得た、180度の方向転換です。</p>
+        <p class="o-insight">→ だからこの構想は「ソロ起業の夢」ではなく、最初からチーム前提で設計しています。</p>
+      </div>
+    </div>
+
+    <h3>ロードマップ — 実行者から、事業の設計者へ</h3>
+    <div class="steps future-road">
+      <div class="step fx">
+        <span class="step-no" aria-hidden="true">01</span>
+        <p class="step-title">個人としての実力を、自分の力で証明する<span class="chip">現在のフェーズ</span></p>
+        <div class="step-body">
+          <p>まずはマーケティング職として、SNS・広告運用で培った強みを軸に、個人としての実力を証明する。友人の紹介で入った会社を離れたのも、「友人のおかげで成功した」にしたくなかったから。誰の看板にも頼らず、自分の名前で結果を出すことが、すべての土台になります。</p>
+        </div>
+      </div>
+      <div class="step fx">
+        <span class="step-no" aria-hidden="true">02</span>
+        <p class="step-title">打点の高いポジションで、ブランドを0から<span class="chip gold">次のフェーズ</span></p>
+        <div class="step-body">
+          <p>有形のブランド・商品を裏側から設計し、チームと共に0から市場に届け、誰もが知るレベルまで育てる。商品が生まれる前の意思決定に関わり、P/L（事業成果）とブランドの世界観・DNAの両方に責任を持つ立場です。その立場から、関わるメンバー一人ひとりの成長やキャリアにも影響を与えたい。</p>
+          <p class="step-quote">「モノづくりがしたいわけではない。この商品を作ることで世の中をこう変えられる——そう思える商品を裏側で設計し、0からブランドを手掛けたい。それが誰もが知るサービスになるなら、市場はどこでも良い。」</p>
+          <div class="role-tags" aria-label="想定する役割の例"><i>CMO</i><i>ブランド事業責任者</i><i>事業部長</i><i>その先に子会社経営</i></div>
+        </div>
+      </div>
+      <div class="step fx">
+        <span class="step-no" aria-hidden="true">10</span>
+        <p class="step-title">複数事業を持ち、新しい価値を作り続けている<span class="chip amber">10年後の状態</span></p>
+        <div class="step-body">
+          <p>10年後の自分は、役職名ではなく「状態」で定義しています。</p>
+          <p class="step-quote">「マーケティング・AI・商品企画を武器に、複数事業を持ち、時間にもお金にも比較的自由があり、興味のある市場を見つけて新しい価値を作り続けている。」</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 成果の定義：amber＝結実（ヒーロー立体図の琥珀ノードと同じ意味） -->
+    <aside class="fruit-note fx">
+      <p class="f-label">Outcome — 成果の定義</p>
+      <div class="f-body">
+        <div>
+          <p class="f-quote">使う人と、作る仲間。その両方が幸福を感じている瞬間に立ち会えたとき、はじめて「やって良かった」と言える。</p>
+          <p class="f-sub">売上グラフの右肩上がりだけをゴールにはしない。商品やサービスを使う人と、関わる内部のメンバーの双方が幸福を感じている——それが私にとっての「結実」であり、ホームの立体図で琥珀色に灯っているものの正体です。</p>
+        </div>
+        <svg class="f-venn" viewBox="0 0 168 122" role="img" aria-label="「使う人」と「作る仲間」の2つの円が重なり、その交点が琥珀色の「結実」として光るベン図">
+          <circle cx="64" cy="50" r="38" fill="none" stroke="rgba(79,216,232,0.55)" stroke-width="1.2"/>
+          <circle cx="104" cy="50" r="38" fill="none" stroke="rgba(91,155,255,0.55)" stroke-width="1.2"/>
+          <circle cx="84" cy="50" r="12" fill="rgba(255,180,84,0.18)"/>
+          <circle cx="84" cy="50" r="4.5" fill="#ffb454"/>
+          <text class="flow-sub" x="40" y="108" text-anchor="middle">使う人</text>
+          <text class="flow-sub" x="128" y="108" text-anchor="middle">作る仲間</text>
+          <text class="flow-sub" x="84" y="76" text-anchor="middle" fill="#ffb454">結実</text>
+        </svg>
+      </div>
+    </aside>
   </section>
 
   <!-- ============ 05 CONTACT ============ -->
@@ -3877,30 +4243,88 @@ html:not(.js) .crumbs{ display:none; }
 </script>
 
 <!-- =====================================================
-     コアグロース図（ヒーロー）の立体版
-     - Three.js を CDN から ES module として読み込む（ビルド不要）
+     コアグロース図（ヒーロー全面）の立体版
+     - Three.js は複数CDNからの動的import（importmap不使用）。
+       【重要・再発防止】旧実装は importmap＋unpkg 単一依存だった。
+       unpkg障害／importmap非対応ブラウザでは module が一度も実行されず、
+       ヒーローが無言で空白になる実バグの温床だったため、
+       jsdelivr→unpkg の順に try/catch フォールバックする方式に変更。
+       どのCDNも失敗・WebGL不可の場合は同じモチーフの静的SVGを描画し、
+       「何も出ない」状態を構造的に排除する。
      - 構造は旧2D版と同じメタファー：核(1)→第1世代分岐(6・正八面体の6方向)
        →第2世代分岐(12)→外殻(半径R3の球面上の12点＋大円リング3本)
        →うち6点が「結実」(琥珀色)し、波紋リングが外へ広がる
+     - キャンバスはヒーロー全面（.cg3d は absolute inset:0）。リサイズ時に
+       アスペクト比からカメラ距離を再計算し、ワイド画面では構造を
+       中央やや右（テキストの反対側）へオフセットする。
+     - 出現フェードは performance.now 基準の絶対時刻で進める
+       （rAFが間引かれる環境でも「opacity:0のまま凍結」しない）。
+       初期サイズ計測が0だった場合は rAF で再試行（レイアウト前実行対策）。
      - 透過背景・自動回転(約38秒/周)・マウス追従の微小パララックス
      - prefers-reduced-motion: reduce では回転・脈動・波紋を止め静止画を描画
      - タブ非表示時／他ビュー表示時（portfolio:viewイベント）はループ停止
      ===================================================== -->
-<script type="importmap">
-{ "imports": { "three": "https://unpkg.com/three@0.169.0/build/three.module.js" } }
-</script>
 <script type="module">
-import * as THREE from 'three';
-
-(function () {
+(async function () {
   'use strict';
   var host = document.getElementById('cg3d');
   if (!host) return;
 
+  /* ---- 最終フォールバック：同モチーフの静的SVG（線画）を生成 ----
+     Three.js が取得できない／WebGLが使えない環境でも空白を残さない。 */
+  function drawStaticFallback() {
+    if (host.querySelector('.cg3d-fallback') || host.querySelector('canvas')) return;
+    var C = 200, R1 = 57, R2 = 103, R3 = 150;
+    var s = '';
+    /* 外殻リング（大円3本の2D投影：正円1＋楕円2） */
+    s += '<circle cx="' + C + '" cy="' + C + '" r="' + R3 + '" fill="none" stroke="rgba(79,216,232,0.28)" stroke-width="1"/>';
+    s += '<ellipse cx="' + C + '" cy="' + C + '" rx="' + R3 + '" ry="52" fill="none" stroke="rgba(79,216,232,0.22)" stroke-width="1"/>';
+    s += '<ellipse cx="' + C + '" cy="' + C + '" rx="52" ry="' + R3 + '" fill="none" stroke="rgba(79,216,232,0.22)" stroke-width="1"/>';
+    for (var i = 0; i < 6; i++) {
+      var a = i * Math.PI / 3 - Math.PI / 2;
+      var x1 = C + Math.cos(a) * R1, y1 = C + Math.sin(a) * R1;
+      s += '<line x1="' + C + '" y1="' + C + '" x2="' + x1 + '" y2="' + y1 + '" stroke="rgba(79,216,232,0.5)" stroke-width="1.1"/>';
+      s += '<circle cx="' + x1 + '" cy="' + y1 + '" r="3.4" fill="#4FD8E8" opacity="0.95"/>';
+      for (var k = -1; k <= 1; k += 2) {
+        var a2 = a + k * 0.30, a3 = a + k * 0.40;
+        var x2 = C + Math.cos(a2) * R2, y2 = C + Math.sin(a2) * R2;
+        var x3 = C + Math.cos(a3) * R3, y3 = C + Math.sin(a3) * R3;
+        s += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="rgba(79,216,232,0.4)" stroke-width="1"/>';
+        s += '<line x1="' + x2 + '" y1="' + y2 + '" x2="' + x3 + '" y2="' + y3 + '" stroke="rgba(79,216,232,0.32)" stroke-width="1"/>';
+        s += '<circle cx="' + x2 + '" cy="' + y2 + '" r="2.6" fill="#4FD8E8" opacity="0.9"/>';
+        if (k === 1) {
+          s += '<circle cx="' + x3 + '" cy="' + y3 + '" r="9" fill="none" stroke="rgba(255,180,84,0.4)" stroke-width="1"/>';
+          s += '<circle cx="' + x3 + '" cy="' + y3 + '" r="4" fill="#ffb454"/>';
+        } else {
+          s += '<circle cx="' + x3 + '" cy="' + y3 + '" r="2.8" fill="#4FD8E8" opacity="0.9"/>';
+        }
+      }
+    }
+    s += '<circle cx="' + C + '" cy="' + C + '" r="16" fill="rgba(79,216,232,0.18)"/>';
+    s += '<circle cx="' + C + '" cy="' + C + '" r="7" fill="#8BEAF5"/>';
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 400 400');
+    svg.setAttribute('class', 'cg3d-fallback');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.innerHTML = s;
+    host.appendChild(svg);
+  }
+
+  /* ---- Three.js の取得：CDNを順に試す ---- */
+  var THREE = null;
+  var sources = [
+    'https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js',
+    'https://unpkg.com/three@0.169.0/build/three.module.js'
+  ];
+  for (var si = 0; si < sources.length && !THREE; si++) {
+    try { THREE = await import(sources[si]); } catch (e) { THREE = null; }
+  }
+  if (!THREE || !THREE.WebGLRenderer) { drawStaticFallback(); return; }
+
   var renderer;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
-  } catch (e) { return; /* WebGL不可の環境では何も描かない（キャプションは残る） */ }
+  } catch (e) { drawStaticFallback(); return; /* WebGL(2)不可の環境は静的SVGで代替 */ }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setClearColor(0x000000, 0); /* 透過：ヒーロー背景が透ける */
   host.appendChild(renderer.domElement);
@@ -4049,7 +4473,12 @@ import * as THREE from 'three';
     }
   });
 
-  /* ---- アニメーション ---- */
+  /* ---- アニメーション ----
+     出現フェードの時刻 t は rAF の累積デルタではなく performance.now 基準の
+     絶対経過時間で進める。rAFが間引かれる・止まる環境（バックグラウンド起動、
+     省電力モード等）でも、次に描画された1フレームで必ず正しい進行状態になる
+     ＝「opacity:0のまま凍結して何も見えない」事故を構造的に防ぐ。 */
+  var startTime = performance.now();
   var t = reduced ? 10 : 0; /* reduce時は出現シーケンス完了状態から静止 */
   var mouse = { x: 0, y: 0 };
   if (!reduced) {
@@ -4062,7 +4491,7 @@ import * as THREE from 'three';
   function smooth(p) { return p <= 0 ? 0 : p >= 1 ? 1 : p * p * (3 - 2 * p); }
 
   function update(dt) {
-    t += dt;
+    if (!reduced) t = (performance.now() - startTime) / 1000;
     for (var i = 0; i < fades.length; i++) {
       var f = fades[i];
       f.mat.opacity = f.target * smooth((t - f.start) / FADE_DUR);
@@ -4092,7 +4521,12 @@ import * as THREE from 'three';
   }
 
   var clock = new THREE.Clock();
-  var raf = 0, running = false, homeVisible = true;
+  var raf = 0, running = false;
+  /* このモジュールは動的import完了後（＝DOMContentLoaded後の可能性あり）に
+     実行されるため、初期ビューの portfolio:view 通知を受け取れていない場合が
+     ある。現在のDOM状態（#home の hidden 属性）から初期値を復元する。 */
+  var homeEl = document.getElementById('home');
+  var homeVisible = !(homeEl && homeEl.hidden);
   function frame() {
     raf = requestAnimationFrame(frame);
     update(Math.min(clock.getDelta(), 0.1));
@@ -4114,15 +4548,38 @@ import * as THREE from 'three';
     setRunning(!document.hidden && homeVisible);
   });
 
+  /* ---- サイズ＆フレーミング ----
+     キャンバスはヒーロー全面（非正方形）。アスペクト比から、構造全体
+     （半径R3＋波紋・グローの余白）が必ず収まるカメラ距離を再計算する。
+     ワイド画面ではテキスト（左下）の反対側＝中央やや右に構造を寄せる。 */
+  var FIT = 12.4; /* 収めるべき半径（ワールド単位）。R3=9＋波紋の広がり＋余白 */
   function resize() {
-    var w = host.clientWidth || 0;
-    if (!w) return;
-    renderer.setSize(w, w, false);
+    var w = host.clientWidth || 0, h = host.clientHeight || 0;
+    if (!w || !h) return false;
+    renderer.setSize(w, h, false);
+    var aspect = w / h;
+    camera.aspect = aspect;
+    var half = Math.tan(camera.fov * Math.PI / 360);
+    var z = FIT / half;                          /* 高さ基準でフィット */
+    if (aspect < 1) z = FIT / (half * aspect);   /* 縦長画面は幅基準 */
+    camera.position.z = z;
+    camera.updateProjectionMatrix();
+    var halfW = half * z * aspect;
+    pivot.position.x = aspect > 1.05 ? Math.min(halfW * 0.2, 6.5) : 0;
+    pivot.position.y = aspect > 1.05 ? 0.6 : 2.4; /* 下部テキストを避けて僅かに上へ */
     if (!running) { update(0); renderer.render(scene, camera); } /* reduce時・停止時も静止画は最新に */
+    return true;
   }
-  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(host);
-  else addEventListener('resize', resize);
-  resize();
-  setRunning(!document.hidden);
+  if ('ResizeObserver' in window) new ResizeObserver(function () { resize(); }).observe(host);
+  else addEventListener('resize', function () { resize(); });
+  /* 初期サイズ計測：レイアウト確定前・親が非表示のタイミングで実行された場合、
+     clientWidth/Height が 0 のことがある。0でなくなるまで rAF で再試行する
+     （上限あり。以降の変化は ResizeObserver が拾う）。 */
+  var sizeTries = 0;
+  (function ensureSized() {
+    if (resize()) return;
+    if (++sizeTries < 600) requestAnimationFrame(ensureSized);
+  })();
+  setRunning(!document.hidden && homeVisible);
 })();
 </script>
