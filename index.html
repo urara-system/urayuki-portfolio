@@ -908,6 +908,11 @@ html:not(.js) .crumbs{ display:none; }
 
 .origin-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-top:1.4rem; }
 @media (max-width:680px){ .origin-grid{ grid-template-columns:1fr; } }
+.tool-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin-top:1.4rem; }
+@media (max-width:860px){ .tool-grid{ grid-template-columns:1fr; } }
+.tool-grid .origin-card h4{ margin:0; display:flex; flex-wrap:wrap; align-items:baseline; gap:0.5rem; }
+.tool-grid .origin-card ul{ margin:0.7rem 0 0; padding-left:1.1em; font-size:0.83rem; line-height:1.9; color:var(--ink-soft); }
+.tool-grid .origin-card li{ margin:0.45rem 0; }
 .origin-card{
   position:relative; border:1px solid var(--line); border-radius:10px;
   background-color:var(--cell);
@@ -2536,46 +2541,35 @@ html:not(.js) .crumbs{ display:none; }
             </div>
           </div>
 
-          <h4 class="sub">カスタマージャーニーの設計 — LPOという考え方</h4>
-          <p>SNS（集客）・LP・CRMは別々の施策ではなく、認知から購入までひとつのカスタマージャーニーとして一貫して設計している。媒体ごとに担う役割・色分けは以下の通り。</p>
-          <div class="steps">
-            <div class="step fx">
-              <span class="step-no" aria-hidden="true">01</span>
-              <p class="step-title">Instagram<span class="chip violet">SNS</span><span class="aim">集客・認知</span></p>
-              <div class="step-body">
-                <p>どのペルソナに、どんな一言で「これは自分に関係がある」と気づいてもらうかを設計する。</p>
-              </div>
+          <h4 class="sub">ゴールは売上。SNS・LPO・CRMは、そのための手段</h4>
+          <p>SNSを伸ばすこと自体も、LPを作ること自体も、目的ではない。ゴールは常に売上で、SNS・LPO・記事LP・CRM（LINE）はそこに向かうための手段でしかない。実際にどう手を動かしたかは、以下の通り。</p>
+          <div class="tool-grid">
+            <div class="origin-card fx">
+              <h4>SNS<span class="chip violet">集客の起点</span></h4>
+              <ul>
+                <li>Instagramアカウントを0→1で開設し、投稿企画・運用を一人で担当</li>
+                <li>対象を理学療法士国家試験受験者（年間12,000人市場）に絞り込み、当事者にしか響かない言葉で発信</li>
+                <li>半年でフォロワー4,000人、市場の約1/4規模まで集客を拡大</li>
+              </ul>
             </div>
-            <div class="step fx">
-              <span class="step-no" aria-hidden="true">02</span>
-              <p class="step-title">記事LP①（集客導線）<span class="chip gold">LP</span><span class="aim">興味 → 行動</span></p>
-              <div class="step-body">
-                <p>興味本位で終わらせず、「もっと知りたい」という感情のまま、LINE登録まで読み進めてもらう構成にする。</p>
-              </div>
+            <div class="origin-card fx">
+              <h4>LPO<span class="chip gold">記事LPの設計・改善</span></h4>
+              <ul>
+                <li>Instagram→LINE登録のオプトイン記事LP、LINE→購入の教育記事LPの2本を自分で執筆・制作</li>
+                <li>開封率・CTR・アクション率・CVRを見て、どこで心理的につまずいているかを仮説として立てる</li>
+                <li>例：開封率が伸びなければタイトルを、アクション率が伸びなければ実例・安心材料を変更し、書き直す</li>
+              </ul>
             </div>
-            <div class="step fx">
-              <span class="step-no" aria-hidden="true">03</span>
-              <p class="step-title">LINE（見込み客）<span class="chip green">CRM</span><span class="aim">登録の心理的ハードル</span></p>
-              <div class="step-body">
-                <p>「損はない」と思える軽さで、気軽に一歩を踏み出せる状態を設計する。</p>
-              </div>
-            </div>
-            <div class="step fx">
-              <span class="step-no" aria-hidden="true">04</span>
-              <p class="step-title">記事LP②（教育）<span class="chip gold">LP</span><span class="aim">価値と背景の理解</span></p>
-              <div class="step-body">
-                <p>届けたい価値と、その背景（なぜこの方法が効くのか）を理解してもらい、信頼を積み上げる。</p>
-              </div>
-            </div>
-            <div class="step fx">
-              <span class="step-no" aria-hidden="true">05</span>
-              <p class="step-title">セールス文章 → 購入<span class="chip gold">LP</span><span class="aim">決断の後押し</span></p>
-              <div class="step-body">
-                <p>価格やリスクへの不安を解消し、「今、決める」という納得感をつくり、購入の意思決定を後押しする。</p>
-              </div>
+            <div class="origin-card fx">
+              <h4>CRM（LINE）<span class="chip green">関係構築と販売</span></h4>
+              <ul>
+                <li>LINE公式アカウントで教材・指導を販売する導線を設計</li>
+                <li>登録直後に売り込まず、教育コンテンツを配信して信頼を積み上げてから販売</li>
+                <li>LINE登録は2,000〜3,000人まで拡大し、教材・指導の販売につなげた</li>
+              </ul>
             </div>
           </div>
-          <p class="viz-note">※ SNS・LP・CRMは媒体も役割も異なるが、担当は自分ひとり。だからこそ、部分最適ではなく認知から購入までを一つの設計図として管理できる。媒体（Instagram／LINE）とLPとでは設計すべき人間心理・感情がまったく違い、LPはその間を埋める「クッション」として心理的な段差を要素分解して繋ぐ役割を持つ。定量データ（開封率・CTR・アクション率・CVR等）は、この一貫したジャーニー設計のどこがボトルネックになっているかを教えてくれる指標であり、そこを直せば結果につながる——という考え方でPDCAを回していた。</p>
+          <p class="viz-note">※ SNS・LPO・CRMはそれぞれ独立した専門スキルではなく、「売上」という一つのゴールに対する手段。どれか一つを極めるより、3つを行き来しながら今どこがボトルネックかを判断し、実際に手を動かして改善し続けるのが自分のマーケティングの型。</p>
 
           <p class="work-note">※ ここでマーケティングの面白さに気づき、キャリアの起点となった。月商は最大約100万円まで到達。</p>
         </article>
