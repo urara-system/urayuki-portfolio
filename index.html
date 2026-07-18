@@ -2680,6 +2680,7 @@ html:not(.js) .crumbs{ display:none; }
               <ul>
                 <li>LINE公式アカウントで教材・指導を販売する導線を設計</li>
                 <li>登録直後に売り込まず、教育コンテンツを配信して信頼を積み上げてから販売</li>
+                <li>購入後も関係を終わらせず、上位プラン（個別指導等）のアップセルや、関連教材のクロスセルを提案しLTVを伸ばす</li>
               </ul>
             </div>
           </div>
@@ -2716,6 +2717,11 @@ html:not(.js) .crumbs{ display:none; }
               <h5>購入</h5>
               <p class="jc-insight">感情が行動に変わった瞬間</p>
             </div>
+            <div class="journey-card fx">
+              <div class="jc-head"><span class="jc-no">07</span><span class="chip green">CRM</span></div>
+              <h5>アップセル・クロスセル</h5>
+              <p class="jc-insight">購入・行動データからこの人が本当に求めているものを捉え、最適な次の提案だけをする</p>
+            </div>
           </div>
           <p class="viz-cap sm">ファネル指標（心理の段階を追う）</p>
           <div class="diag-strip">
@@ -2724,17 +2730,14 @@ html:not(.js) .crumbs{ display:none; }
             <span class="diag-pill">アクション率</span><span class="diag-arrow">→</span>
             <span class="diag-pill">CVR</span>
           </div>
-          <p class="viz-cap sm">補助指標（ヒートマップ以外で、つまずきの場所を特定する）</p>
+          <p class="viz-cap sm">LINE配信指標（LPの外＝ナーチャリング配信自体のデータ）</p>
           <div class="diag-strip">
-            <span class="diag-pill alt">直帰率</span>
-            <span class="diag-pill alt">平均滞在時間</span>
-            <span class="diag-pill alt">スクロール到達率（50/75/100%）</span>
-            <span class="diag-pill alt">セクション別離脱率</span>
-            <span class="diag-pill alt">フォーム到達・完了率</span>
-            <span class="diag-pill alt">流入経路別CVR</span>
-            <span class="diag-pill alt">デバイス別CVR</span>
+            <span class="diag-pill alt">配信開封率</span>
+            <span class="diag-pill alt">配信内クリック率</span>
+            <span class="diag-pill alt">ブロック率</span>
+            <span class="diag-pill alt">シナリオ完了率</span>
           </div>
-          <p class="viz-note">※ LPは媒体（Instagram／LINE）間の心理の段差を埋める「クッション」。ファネル指標でどこが動いたかを見て、補助指標でどこで・なぜつまずいたかを特定し、上の心理を疑って記事を直す——を繰り返した。SNS・LPO・CRMは独立したスキルではなく、売上という一つのゴールの手段。</p>
+          <p class="viz-note">※ PV・CVはLPの中の話。だがLINE登録後、記事LP②に届く前に配信自体で離脱・ブロックされていれば、直すべきはLPではなく配信の頻度・内容・タイミング。LPの数値とLINE配信の数値、両方を見て初めて「どの区間で失っているか」が分かる。</p>
 
           <h4 class="sub">改善の思考プロセス — ロジックツリー</h4>
           <p>ジャーニーを「認知〜興味」「登録〜教育」「決断〜購入」の3つの局面に分解し、それぞれをデータと突き合わせて、どの心理でつまずいているかを疑い、LPのどの要素を変更するかまで一気通貫でたどる。</p>
@@ -2757,11 +2760,18 @@ html:not(.js) .crumbs{ display:none; }
             <div class="lt-branch fx">
               <div class="lt-node lt-phase">登録〜教育<span class="chip green">LINE／記事LP②</span></div>
               <div class="lt-children">
-                <div class="lt-node lt-data">アクション率・スクロール到達率が低い</div>
+                <div class="lt-node lt-data">記事LP②のアクション率・スクロール到達率が低い</div>
                 <div class="lt-children">
                   <div class="lt-node lt-psych">価値と背景を理解しきれておらず、安心材料が不足</div>
                   <div class="lt-children">
                     <div class="lt-node lt-fix">変更：実例・体験談・データの提示順序</div>
+                  </div>
+                </div>
+                <div class="lt-node lt-data">LINE配信の開封率・クリック率が低い（LPに届く前に離脱）</div>
+                <div class="lt-children">
+                  <div class="lt-node lt-psych">配信の頻度・内容・タイミングが響いていない、興味を失っている</div>
+                  <div class="lt-children">
+                    <div class="lt-node lt-fix">変更：LPではなく配信の内容・頻度・シナリオ自体を見直す</div>
                   </div>
                 </div>
               </div>
@@ -2775,6 +2785,19 @@ html:not(.js) .crumbs{ display:none; }
                   <div class="lt-node lt-psych">価格やリスク（本当に効果があるか）への不安が残っている</div>
                   <div class="lt-children">
                     <div class="lt-node lt-fix">変更：保証・FAQ・比較訴求を追加</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="lt-branch fx">
+              <div class="lt-node lt-phase">購入後〜LTV<span class="chip green">CRM／アップセル・クロスセル</span></div>
+              <div class="lt-children">
+                <div class="lt-node lt-data">購入商品・閲覧履歴・進捗などの行動データを確認</div>
+                <div class="lt-children">
+                  <div class="lt-node lt-psych">このユーザーが次に求めているインサイトを捉える</div>
+                  <div class="lt-children">
+                    <div class="lt-node lt-fix">実行：一律オファーではなく、その人に合った上位プラン・関連教材だけを提案</div>
                   </div>
                 </div>
               </div>
