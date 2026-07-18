@@ -1103,6 +1103,28 @@ html:not(.js) .crumbs{ display:none; }
 .viz-card svg.gauge-svg{ max-width:320px; margin:0 auto; }
 .viz-note{ margin:0.55rem 0 0; font-size:0.69rem; line-height:1.75; color:var(--ink-faint); }
 
+/* ---------- 診断フロー表：指標→つまずきの仮説→直す要素（記事LP改善サイクル） ---------- */
+.diag-table{ display:flex; flex-direction:column; gap:0.8rem; margin-top:1.3rem; }
+.diag-row{
+  display:grid; grid-template-columns:9em 1fr 11em; gap:0.9rem; align-items:center;
+  padding:0.75rem 0.95rem; border:1px solid var(--line); border-radius:8px;
+  background:var(--cell);
+}
+.diag-row .diag-metric{
+  font-family:var(--font-sans); font-weight:700; font-size:0.82rem; color:var(--synapse);
+  border-right:1px solid var(--line); padding-right:0.9rem; line-height:1.55;
+}
+.diag-row .diag-why{ margin:0; font-size:0.8rem; line-height:1.85; color:var(--ink-soft); }
+.diag-row .diag-fix{
+  font-size:0.72rem; font-weight:600; color:var(--ink); text-align:right;
+  border-left:1px solid var(--line); padding-left:0.9rem; line-height:1.7;
+}
+@media (max-width:680px){
+  .diag-row{ grid-template-columns:1fr; gap:0.4rem; }
+  .diag-row .diag-metric{ border-right:none; padding-right:0; }
+  .diag-row .diag-fix{ border-left:none; padding-left:0; text-align:left; }
+}
+
 /* ---------- 工程フロー図（企画→構成→制作→投稿→分析など）：ノード＋流れる粒子 ---------- */
 .flow-svg{ overflow:visible; }
 .flow-path{ fill:none; stroke:rgba(79,216,232,0.32); stroke-width:1.4; vector-effect:non-scaling-stroke; }
@@ -2016,6 +2038,7 @@ html:not(.js) .crumbs{ display:none; }
             <button type="button" class="work-preview" data-open-work-from-cap="lsm" data-cap-origin="crm"><span class="wp-no">WORK 05</span><span class="wp-title">LSM</span><span class="wp-sum">公式LINE運用：既存リストの掘り起こし（セールス配信）、新規リスト取り→L-step構築（シナリオ／タグ等）。</span><span class="wp-go">実績詳細へ →</span></button>
             <button type="button" class="work-preview" data-open-work-from-cap="femuse" data-cap-origin="crm"><span class="wp-no">WORK 03</span><span class="wp-title">femuse</span><span class="wp-sum">公式LINE／L-step／Amazonレビュー周りのCRM戦略を担当。</span><span class="wp-go">実績詳細へ →</span></button>
             <button type="button" class="work-preview" data-open-work-from-cap="sunao" data-cap-origin="crm"><span class="wp-no">WORK 02</span><span class="wp-title">す・なお</span><span class="wp-sum">公式LINE周りのCRM戦略を担当。</span><span class="wp-go">実績詳細へ →</span></button>
+            <button type="button" class="work-preview" data-open-work-from-cap="ptschool" data-cap-origin="crm"><span class="wp-no">WORK 07</span><span class="wp-title">理学療法士国家試験対策 オンライン塾</span><span class="wp-sum">LINE公式アカウントへの登録導線を設計し、教材・指導の販売まで一人で構築。半年でLINE登録2,000〜3,000人。</span><span class="wp-go">実績詳細へ →</span></button>
           </div>
         </div>
 
@@ -2069,6 +2092,7 @@ html:not(.js) .crumbs{ display:none; }
           <div class="cap-related">
             <button type="button" class="work-preview" data-open-work-from-cap="lifetime" data-cap-origin="lp"><span class="wp-no">WORK 04</span><span class="wp-title">ライフタイムサポート</span><span class="wp-sum">STUDIOでLP作成、GA4・GTM構築まで担当。</span><span class="wp-go">実績詳細へ →</span></button>
             <button type="button" class="work-preview" data-open-work-from-cap="lsm" data-cap-origin="lp"><span class="wp-no">WORK 05</span><span class="wp-title">LSM</span><span class="wp-sum">SNS用LP・広告用LPを作成（ライティング／ワイヤー設計／デザインリファ）。</span><span class="wp-go">実績詳細へ →</span></button>
+            <button type="button" class="work-preview" data-open-work-from-cap="ptschool" data-cap-origin="lp"><span class="wp-no">WORK 07</span><span class="wp-title">理学療法士国家試験対策 オンライン塾</span><span class="wp-sum">Instagram→LINE登録の記事LP、LINE→購入の教育用記事LPを制作。指標→心理的つまずき→改善要素の診断フローで運用。</span><span class="wp-go">実績詳細へ →</span></button>
           </div>
         </div>
 
@@ -2508,11 +2532,12 @@ html:not(.js) .crumbs{ display:none; }
             <span class="eyebrow">WORK 07 ／ 学生時代</span>
             <h3>理学療法士国家試験対策 オンライン塾</h3>
             <div class="work-meta">個人事業として0→1で立ち上げ・運営</div>
-            <div class="work-tags"><span class="chip">マーケティング戦略設計</span><span class="chip">SNS運用・インフルエンサーマネジメント</span></div>
+            <div class="work-tags"><span class="chip">マーケティング戦略設計</span><span class="chip">SNS運用・インフルエンサーマネジメント</span><span class="chip">CRM構築</span><span class="chip">LP制作</span></div>
           </div>
-          <figure class="fig"><div class="fig-graphic tone-c3"><svg class="ic" aria-hidden="true"><use href="#ic-launch"></use></svg></div><figcaption class="fig-cap">理学療法士国家試験対策市場（年間受験者約12,000人）向けに、Instagram集客からLINE登録・教材販売までを一人で設計</figcaption></figure>
+          <figure class="fig"><div class="fig-graphic tone-c3"><svg class="ic" aria-hidden="true"><use href="#ic-launch"></use></svg></div><figcaption class="fig-cap">理学療法士国家試験対策市場（年間受験者約12,000人）向けに、Instagram集客から記事LP・LINE登録・教材販売までを一人で設計</figcaption></figure>
           <ul>
             <li>Instagramアカウントの0→1立ち上げ・コンテンツ企画・運用</li>
+            <li>記事LPを2種類制作：①Instagram→LINE登録への導線となるオプトイン記事LP　②LINE登録後、購入まで教育する記事LP（CRM領域）</li>
             <li>LINE公式アカウントへの登録導線設計、教材・指導の販売</li>
             <li>市場調査から集客・収益化までを一貫して一人で担当</li>
           </ul>
@@ -2532,6 +2557,35 @@ html:not(.js) .crumbs{ display:none; }
               </div>
             </div>
           </div>
+
+          <h4 class="sub">記事LPの改善診断フロー</h4>
+          <div class="viz-card wide viz">
+            <p class="viz-cap">指標 → つまずきの仮説 → 直す要素</p>
+            <div class="diag-table">
+              <div class="diag-row anim-fade" style="transition-delay:.05s">
+                <span class="diag-metric">開封率</span>
+                <p class="diag-why">最初の一言で「自分に関係がある」と思ってもらえていない</p>
+                <span class="diag-fix">タイトル・フックの言葉を変更</span>
+              </div>
+              <div class="diag-row anim-fade" style="transition-delay:.2s">
+                <span class="diag-metric">記事内CTR</span>
+                <p class="diag-why">共感パートが弱く、読み進める理由を感じてもらえていない</p>
+                <span class="diag-fix">導入・共感パートを書き直す</span>
+              </div>
+              <div class="diag-row anim-fade" style="transition-delay:.35s">
+                <span class="diag-metric">アクション率<br>（LINE登録／購入導線）</span>
+                <p class="diag-why">背中を押す実例・安心材料が不足し、最後の一歩を踏み出せていない</p>
+                <span class="diag-fix">実績・体験談・具体例を追加</span>
+              </div>
+              <div class="diag-row anim-fade" style="transition-delay:.5s">
+                <span class="diag-metric">CVR（最終購入）</span>
+                <p class="diag-why">価格やリスク（本当に効果があるか）への不安が解消されていない</p>
+                <span class="diag-fix">保証・FAQ・比較訴求を追加</span>
+              </div>
+            </div>
+            <p class="viz-note">※ 数値そのものより、「どの指標が動いたら、顧客のどんな心理的つまずきを疑い、記事のどの要素を直すか」という診断の型を、2つの記事LP（Instagram→LINE登録／LINE→購入）双方の改善サイクルで運用していた。</p>
+          </div>
+
           <p class="work-note">※ ここでマーケティングの面白さに気づき、キャリアの起点となった。月商は最大約100万円まで到達。</p>
         </article>
 
