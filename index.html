@@ -927,6 +927,37 @@ html:not(.js) .crumbs{ display:none; }
 }
 .viz-cap.sm{ margin-top:1.1rem; }
 
+/* ---------- ロジックツリー：局面→データ→心理の仮説→変更する要素 ---------- */
+.logic-tree{ margin-top:1.4rem; }
+.lt-root{
+  display:inline-block; font-weight:700; font-size:0.88rem; color:var(--ink);
+  border:1px solid var(--line-strong); border-radius:8px; background:var(--cell-2);
+  padding:0.55rem 1rem;
+}
+.lt-branch{
+  margin:0.9rem 0 0 1.3rem; padding-left:1.3rem;
+  border-left:1px dashed var(--line);
+}
+.lt-children{ margin-left:1.3rem; padding-left:1.3rem; border-left:1px dashed var(--line); }
+.lt-node{
+  position:relative; display:inline-block; margin:0.5rem 0;
+  font-size:0.8rem; line-height:1.6; border-radius:7px;
+  border:1px solid var(--line); background:var(--cell); padding:0.45rem 0.85rem;
+}
+.lt-node::before{
+  content:""; position:absolute; top:50%; left:-1.3rem; width:1.3rem; height:1px;
+  background:var(--line); transform:translateY(-1px);
+}
+.lt-node.lt-phase{ font-weight:700; color:var(--ink); border-color:rgba(79,216,232,0.4); display:flex; flex-wrap:wrap; align-items:baseline; gap:0.5rem; }
+.lt-node.lt-data{ color:var(--c2); font-weight:600; }
+.lt-node.lt-psych{ color:var(--ink-soft); font-style:italic; }
+.lt-node.lt-fix{ color:#ffb454; font-weight:700; border-color:rgba(255,180,84,0.4); background:var(--fruit-soft); }
+@media (max-width:640px){
+  .lt-branch{ margin-left:0.6rem; padding-left:0.9rem; }
+  .lt-children{ margin-left:0.6rem; padding-left:0.9rem; }
+  .lt-node::before{ left:-0.9rem; width:0.9rem; }
+}
+
 /* ---------- ジャーニー行：各接点のユーザー心理をカードで見せる ---------- */
 .journey-row{ display:flex; flex-wrap:wrap; align-items:stretch; gap:0.5rem; margin-top:1rem; }
 .journey-card{
@@ -2704,6 +2735,52 @@ html:not(.js) .crumbs{ display:none; }
             <span class="diag-pill alt">デバイス別CVR</span>
           </div>
           <p class="viz-note">※ LPは媒体（Instagram／LINE）間の心理の段差を埋める「クッション」。ファネル指標でどこが動いたかを見て、補助指標でどこで・なぜつまずいたかを特定し、上の心理を疑って記事を直す——を繰り返した。SNS・LPO・CRMは独立したスキルではなく、売上という一つのゴールの手段。</p>
+
+          <h4 class="sub">改善の思考プロセス — ロジックツリー</h4>
+          <p>ジャーニーを「認知〜興味」「登録〜教育」「決断〜購入」の3つの局面に分解し、それぞれをデータと突き合わせて、どの心理でつまずいているかを疑い、LPのどの要素を変更するかまで一気通貫でたどる。</p>
+          <div class="logic-tree">
+            <div class="lt-root">LPの成果が伸び悩んでいる</div>
+
+            <div class="lt-branch fx">
+              <div class="lt-node lt-phase">認知〜興味<span class="chip violet">Instagram／記事LP①</span></div>
+              <div class="lt-children">
+                <div class="lt-node lt-data">開封率・記事内CTRが低い</div>
+                <div class="lt-children">
+                  <div class="lt-node lt-psych">「自分に関係がある」と思われていない／共感導入が弱い</div>
+                  <div class="lt-children">
+                    <div class="lt-node lt-fix">変更：タイトル・フック文言／導入の共感パート</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="lt-branch fx">
+              <div class="lt-node lt-phase">登録〜教育<span class="chip green">LINE／記事LP②</span></div>
+              <div class="lt-children">
+                <div class="lt-node lt-data">アクション率・スクロール到達率が低い</div>
+                <div class="lt-children">
+                  <div class="lt-node lt-psych">価値と背景を理解しきれておらず、安心材料が不足</div>
+                  <div class="lt-children">
+                    <div class="lt-node lt-fix">変更：実例・体験談・データの提示順序</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="lt-branch fx">
+              <div class="lt-node lt-phase">決断〜購入<span class="chip gold">セールス文章</span></div>
+              <div class="lt-children">
+                <div class="lt-node lt-data">CVR・フォーム完了率が低い</div>
+                <div class="lt-children">
+                  <div class="lt-node lt-psych">価格やリスク（本当に効果があるか）への不安が残っている</div>
+                  <div class="lt-children">
+                    <div class="lt-node lt-fix">変更：保証・FAQ・比較訴求を追加</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="viz-note">※ 「局面 → データ → 心理の仮説 → 変更する要素」の順で、必ずデータから出発する。感覚で書き直すのではなく、どの指標が動いたかを起点に、LPのどこを直すかを決める。</p>
 
           <p class="work-note">※ ここでマーケティングの面白さに気づき、キャリアの起点となった。月商は最大約100万円まで到達。</p>
         </article>
