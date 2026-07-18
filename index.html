@@ -921,6 +921,30 @@ html:not(.js) .crumbs{ display:none; }
   background:var(--synapse-soft);
 }
 .diag-arrow{ color:var(--ink-faint); font-family:var(--font-mono); font-size:0.9rem; }
+.diag-pill.alt{
+  font-weight:600; font-size:0.76rem; color:var(--ink-soft);
+  border-color:var(--line); background:var(--cell);
+}
+.viz-cap.sm{ margin-top:1.1rem; }
+
+/* ---------- ジャーニー行：各接点のユーザー心理をカードで見せる ---------- */
+.journey-row{ display:flex; flex-wrap:wrap; align-items:stretch; gap:0.5rem; margin-top:1rem; }
+.journey-card{
+  flex:1 1 160px; min-width:150px;
+  border:1px solid var(--line); border-radius:10px; background:var(--cell);
+  padding:0.85rem 0.95rem;
+}
+.journey-card.fruit-end{ border-color:rgba(255,180,84,0.4); }
+.journey-card .jc-head{ display:flex; align-items:center; gap:0.5rem; }
+.journey-card .jc-no{ font-family:var(--font-mono); font-size:0.66rem; color:var(--ink-faint); letter-spacing:0.1em; }
+.journey-card h5{ margin:0.5rem 0 0; font-size:0.9rem; font-weight:700; }
+.journey-card .jc-insight{ margin:0.5rem 0 0; font-size:0.76rem; line-height:1.75; color:var(--ink-soft); }
+.journey-arrow{
+  display:flex; align-items:center; justify-content:center;
+  color:var(--ink-faint); font-family:var(--font-mono); font-size:0.9rem;
+  flex:0 0 auto; padding:0 0.1rem;
+}
+@media (max-width:760px){ .journey-arrow{ display:none; } }
 .origin-card{
   position:relative; border:1px solid var(--line); border-radius:10px;
   background-color:var(--cell);
@@ -2558,7 +2582,7 @@ html:not(.js) .crumbs{ display:none; }
           </div>
 
           <h4 class="sub">ゴールは売上。SNS・LPO・CRMは、そのための手段</h4>
-          <p>SNSを伸ばすこと自体も、LPを作ること自体も、目的ではない。ゴールは常に売上で、SNS・LPO・CRM（LINE）はそこに向かうための手段でしかない。</p>
+          <p>SNS・LPO・CRM（LINE）は、それ自体が目的ではなく、売上という一つのゴールに向かう手段。</p>
 
           <div class="viz-card wide viz">
             <p class="viz-cap">3つの手段が、売上という一つのゴールに収束する</p>
@@ -2629,49 +2653,57 @@ html:not(.js) .crumbs{ display:none; }
             </div>
           </div>
 
-          <div class="viz-card wide viz">
-            <p class="viz-cap">カスタマージャーニー全体：Instagram → 記事LP → LINE → 記事LP → セールス文章 → 購入</p>
-            <svg class="flow-svg" viewBox="0 0 680 150" role="img" aria-label="Instagram、記事LP、LINE、記事LP、セールス文章、購入の6段階が一気通貫でつながるジャーニー図">
-              <path class="flow-path anim-draw" d="M40 55 H620" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
-              <circle class="syn-dot" cx="0" cy="0" r="3" style="offset-path:path('M40 55 H620'); animation-delay:0s;"/>
-              <circle class="syn-dot" cx="0" cy="0" r="3" style="offset-path:path('M40 55 H620'); animation-delay:2.6s;"/>
-
-              <g class="flow-node anim-fade" style="transition-delay:.05s"><circle cx="40" cy="55" r="15"/><text x="40" y="60" text-anchor="middle">1</text></g>
-              <text class="flow-label" x="40" y="95" text-anchor="middle">Instagram</text><text class="flow-sub" x="40" y="112" text-anchor="middle">認知</text>
-
-              <g class="flow-node anim-fade" style="transition-delay:.2s"><circle cx="156" cy="55" r="15"/><text x="156" y="60" text-anchor="middle">2</text></g>
-              <text class="flow-label" x="156" y="95" text-anchor="middle">記事LP①</text><text class="flow-sub" x="156" y="112" text-anchor="middle">興味 → 行動</text>
-
-              <g class="flow-node anim-fade" style="transition-delay:.35s"><circle cx="272" cy="55" r="15"/><text x="272" y="60" text-anchor="middle">3</text></g>
-              <text class="flow-label" x="272" y="95" text-anchor="middle">LINE</text><text class="flow-sub" x="272" y="112" text-anchor="middle">見込み客化</text>
-
-              <g class="flow-node anim-fade" style="transition-delay:.5s"><circle cx="388" cy="55" r="15"/><text x="388" y="60" text-anchor="middle">4</text></g>
-              <text class="flow-label" x="388" y="95" text-anchor="middle">記事LP②</text><text class="flow-sub" x="388" y="112" text-anchor="middle">教育・理解</text>
-
-              <g class="flow-node anim-fade" style="transition-delay:.65s"><circle cx="504" cy="55" r="15"/><text x="504" y="60" text-anchor="middle">5</text></g>
-              <text class="flow-label" x="504" y="95" text-anchor="middle">セールス文章</text><text class="flow-sub" x="504" y="112" text-anchor="middle">決断の後押し</text>
-
-              <g class="anim-fade" style="transition-delay:.8s">
-                <circle cx="620" cy="55" r="9" fill="#ffb454"/>
-                <circle cx="620" cy="55" r="15" fill="none" stroke="rgba(255,180,84,0.4)" stroke-width="1"/>
-              </g>
-              <text class="flow-label" x="620" y="95" text-anchor="middle" fill="#ffb454">購入</text>
-            </svg>
-            <p class="viz-note">※ 媒体（Instagram／LINE）とLPとでは設計すべき人間心理・感情がまったく違う。LPはその間を埋める「クッション」として、認知から購入までの心理的な段差を要素分解してつなぐ役割を持つ。</p>
-          </div>
-
-          <div class="viz-card wide viz">
-            <p class="viz-cap">記事LP改善の考え方：指標を追い、心理のつまずきを直す</p>
-            <div class="diag-strip">
-              <span class="diag-pill">開封率</span><span class="diag-arrow">→</span>
-              <span class="diag-pill">記事内CTR</span><span class="diag-arrow">→</span>
-              <span class="diag-pill">アクション率</span><span class="diag-arrow">→</span>
-              <span class="diag-pill">CVR</span>
+          <p class="viz-cap">マーケ脳＝各接点でのユーザー心理をどう捉えていたか</p>
+          <div class="journey-row">
+            <div class="journey-card fx">
+              <div class="jc-head"><span class="jc-no">01</span><span class="chip violet">SNS</span></div>
+              <h5>Instagram</h5>
+              <p class="jc-insight">「これは自分に関係がある」と気づいてもらう一言を届ける</p>
             </div>
-            <p class="viz-note">※ どの指標が動いたら、どんな心理的つまずき（タイトルで自分ごと化できていない／共感が弱い／安心材料が不足／リスク不安が残る）を疑い、記事のどこを直すか——という診断の型で改善を繰り返した。</p>
+            <div class="journey-card fx">
+              <div class="jc-head"><span class="jc-no">02</span><span class="chip gold">LP</span></div>
+              <h5>記事LP①</h5>
+              <p class="jc-insight">興味本位で終わらせず「もっと知りたい」のまま読み進めてもらう</p>
+            </div>
+            <div class="journey-card fx">
+              <div class="jc-head"><span class="jc-no">03</span><span class="chip green">CRM</span></div>
+              <h5>LINE</h5>
+              <p class="jc-insight">「損はない」と思える軽さで、気軽に一歩を踏み出してもらう</p>
+            </div>
+            <div class="journey-card fx">
+              <div class="jc-head"><span class="jc-no">04</span><span class="chip gold">LP</span></div>
+              <h5>記事LP②</h5>
+              <p class="jc-insight">「なぜ効くのか」を理解してもらい、信頼を積み上げる</p>
+            </div>
+            <div class="journey-card fx">
+              <div class="jc-head"><span class="jc-no">05</span><span class="chip gold">LP</span></div>
+              <h5>セールス文章</h5>
+              <p class="jc-insight">価格・リスクへの不安を解消し「今、決めよう」を後押しする</p>
+            </div>
+            <div class="journey-card fruit-end fx">
+              <div class="jc-head"><span class="jc-no">06</span></div>
+              <h5>購入</h5>
+              <p class="jc-insight">感情が行動に変わった瞬間</p>
+            </div>
           </div>
-
-          <p class="viz-note">※ SNS・LPO・CRMはそれぞれ独立した専門スキルではなく、「売上」という一つのゴールに対する手段。どれか一つを極めるより、3つを行き来しながら今どこがボトルネックかを判断し、実際に手を動かして改善し続けるのが自分のマーケティングの型。</p>
+          <p class="viz-cap sm">ファネル指標（心理の段階を追う）</p>
+          <div class="diag-strip">
+            <span class="diag-pill">開封率</span><span class="diag-arrow">→</span>
+            <span class="diag-pill">記事内CTR</span><span class="diag-arrow">→</span>
+            <span class="diag-pill">アクション率</span><span class="diag-arrow">→</span>
+            <span class="diag-pill">CVR</span>
+          </div>
+          <p class="viz-cap sm">補助指標（ヒートマップ以外で、つまずきの場所を特定する）</p>
+          <div class="diag-strip">
+            <span class="diag-pill alt">直帰率</span>
+            <span class="diag-pill alt">平均滞在時間</span>
+            <span class="diag-pill alt">スクロール到達率（50/75/100%）</span>
+            <span class="diag-pill alt">セクション別離脱率</span>
+            <span class="diag-pill alt">フォーム到達・完了率</span>
+            <span class="diag-pill alt">流入経路別CVR</span>
+            <span class="diag-pill alt">デバイス別CVR</span>
+          </div>
+          <p class="viz-note">※ LPは媒体（Instagram／LINE）間の心理の段差を埋める「クッション」。ファネル指標でどこが動いたかを見て、補助指標でどこで・なぜつまずいたかを特定し、上の心理を疑って記事を直す——を繰り返した。SNS・LPO・CRMは独立したスキルではなく、売上という一つのゴールの手段。</p>
 
           <p class="work-note">※ ここでマーケティングの面白さに気づき、キャリアの起点となった。月商は最大約100万円まで到達。</p>
         </article>
