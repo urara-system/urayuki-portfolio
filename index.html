@@ -2536,42 +2536,45 @@ html:not(.js) .crumbs{ display:none; }
             </div>
           </div>
 
-          <h4 class="sub">LPOという考え方</h4>
-          <div class="viz-card wide viz">
-            <p class="viz-cap">LPという大枠に、マーケ視点・定量・定性を組み合わせてPDCAを回し続ける力</p>
-            <svg class="flow-svg" viewBox="0 0 560 220" role="img" aria-label="LPという大枠・マーケティング視点・定量データ・定性データの4つがPDCAというひとつの軸に収束し、そこからLPO（改善し続ける力）へつながる収束図">
-              <path class="flow-path anim-draw" d="M150 34 C215 34 240 92 274 104" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
-              <path class="flow-path anim-draw" d="M150 86 C210 86 235 100 272 108" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
-              <path class="flow-path anim-draw" d="M150 138 C210 138 235 124 272 116" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
-              <path class="flow-path anim-draw" d="M150 190 C215 190 240 132 274 120" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
-              <path class="flow-path anim-draw" d="M346 112 H 444" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
-              <circle class="syn-dot" cx="0" cy="0" r="2.8" style="offset-path:path('M150 34 C215 34 240 92 274 104'); animation-delay:0s;"/>
-              <circle class="syn-dot" cx="0" cy="0" r="2.8" style="offset-path:path('M150 190 C215 190 240 132 274 120'); animation-delay:2.2s;"/>
-              <circle class="syn-dot" cx="0" cy="0" r="2.8" style="offset-path:path('M346 112 H 444'); animation-delay:4.4s;"/>
-
-              <g class="anim-fade" style="transition-delay:.05s">
-                <circle class="syn-node" cx="140" cy="34" r="3.4"/><text class="flow-label" x="128" y="38" text-anchor="end">LPという大枠</text>
-                <circle class="syn-node" cx="140" cy="86" r="3.4"/><text class="flow-label" x="128" y="90" text-anchor="end">マーケティング視点</text>
-                <circle class="syn-node" cx="140" cy="138" r="3.4"/><text class="flow-label" x="128" y="142" text-anchor="end">定量データ</text>
-                <circle class="syn-node" cx="140" cy="190" r="3.4"/><text class="flow-label" x="128" y="194" text-anchor="end">定性データ</text>
-              </g>
-
-              <g class="anim-fade" style="transition-delay:.35s">
-                <circle cx="310" cy="112" r="36" fill="var(--cell)" stroke="var(--synapse)" stroke-width="1.3"/>
-                <circle cx="310" cy="112" r="42" fill="none" stroke="rgba(79,216,232,0.25)" stroke-width="1" stroke-dasharray="3 5"/>
-                <text class="flow-label" x="310" y="108" text-anchor="middle">考え方の</text>
-                <text class="flow-label" x="310" y="126" text-anchor="middle">PDCA</text>
-              </g>
-
-              <g class="anim-fade" style="transition-delay:.6s">
-                <circle cx="460" cy="112" r="13" fill="none" stroke="rgba(255,180,84,0.4)" stroke-width="1"/>
-                <circle cx="460" cy="112" r="6.5" fill="#ffb454"/>
-                <text class="flow-label" x="460" y="152" text-anchor="middle">LPO</text>
-                <text class="flow-sub" x="460" y="170" text-anchor="middle">改善し続けられる力</text>
-              </g>
-            </svg>
-            <p class="viz-note">※ 大事なのは個々の数値の暗記ではなく、「LPの構成」というマーケの大枠に、定量（開封率・CTR・CVR等の変化）と定性（顧客がどこで・なぜつまずいているか）を組み合わせて仮説を立て、改善を回し続けるという考え方そのもの。2つの記事LP（Instagram→LINE登録／LINE→購入）双方でこのサイクルを運用していた。</p>
+          <h4 class="sub">カスタマージャーニーの設計 — LPOという考え方</h4>
+          <div class="steps">
+            <div class="step fx">
+              <span class="step-no" aria-hidden="true">01</span>
+              <p class="step-title">Instagram<span class="aim">集客・認知</span></p>
+              <div class="step-body">
+                <p>どのペルソナに、どんな一言で「これは自分に関係がある」と気づいてもらうかを設計する。</p>
+              </div>
+            </div>
+            <div class="step fx">
+              <span class="step-no" aria-hidden="true">02</span>
+              <p class="step-title">記事LP①（集客導線）<span class="aim">興味 → 行動</span></p>
+              <div class="step-body">
+                <p>興味本位で終わらせず、「もっと知りたい」という感情のまま、LINE登録まで読み進めてもらう構成にする。</p>
+              </div>
+            </div>
+            <div class="step fx">
+              <span class="step-no" aria-hidden="true">03</span>
+              <p class="step-title">LINE（見込み客）<span class="aim">登録の心理的ハードル</span></p>
+              <div class="step-body">
+                <p>「損はない」と思える軽さで、気軽に一歩を踏み出せる状態を設計する。</p>
+              </div>
+            </div>
+            <div class="step fx">
+              <span class="step-no" aria-hidden="true">04</span>
+              <p class="step-title">記事LP②（教育）<span class="aim">価値と背景の理解</span></p>
+              <div class="step-body">
+                <p>届けたい価値と、その背景（なぜこの方法が効くのか）を理解してもらい、信頼を積み上げる。</p>
+              </div>
+            </div>
+            <div class="step fx">
+              <span class="step-no" aria-hidden="true">05</span>
+              <p class="step-title">セールス文章 → 購入<span class="aim">決断の後押し</span></p>
+              <div class="step-body">
+                <p>価格やリスクへの不安を解消し、「今、決める」という納得感をつくり、購入の意思決定を後押しする。</p>
+              </div>
+            </div>
           </div>
+          <p class="viz-note">※ 媒体（Instagram／LINE）とLPとでは、設計すべき人間心理・感情がまったく違う。LPはその間を埋める「クッション」として、認知から購入までの心理的な段差を要素分解して繋ぐ役割を持つ。定量データ（開封率・CTR・アクション率・CVR等）は、この一貫したジャーニー設計のどこがボトルネックになっているかを教えてくれる指標であり、そこを直せば結果につながる——という考え方でPDCAを回していた。</p>
 
           <p class="work-note">※ ここでマーケティングの面白さに気づき、キャリアの起点となった。月商は最大約100万円まで到達。</p>
         </article>
