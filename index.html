@@ -908,11 +908,19 @@ html:not(.js) .crumbs{ display:none; }
 
 .origin-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-top:1.4rem; }
 @media (max-width:680px){ .origin-grid{ grid-template-columns:1fr; } }
-.tool-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin-top:1.4rem; }
-@media (max-width:860px){ .tool-grid{ grid-template-columns:1fr; } }
-.tool-grid .origin-card h4{ margin:0; display:flex; flex-wrap:wrap; align-items:baseline; gap:0.5rem; }
-.tool-grid .origin-card ul{ margin:0.7rem 0 0; padding-left:1.1em; font-size:0.83rem; line-height:1.9; color:var(--ink-soft); }
-.tool-grid .origin-card li{ margin:0.45rem 0; }
+.tool-grid .tt-head h4{ margin:0; display:flex; flex-wrap:wrap; align-items:baseline; gap:0.5rem; font-size:0.96rem; }
+.tool-grid .stat-tile{ margin-top:0.9rem; padding-top:0.8rem; border-top:1px dashed var(--line); }
+.tool-grid ul{ margin:0.8rem 0 0; padding-left:1.1em; font-size:0.8rem; line-height:1.85; color:var(--ink-soft); }
+.tool-grid li{ margin:0.4rem 0; }
+
+/* ---------- 診断ストリップ：指標を追い、心理のつまずきを直す（グラフィック的な帯） ---------- */
+.diag-strip{ display:flex; flex-wrap:wrap; align-items:center; gap:0.6rem; margin-top:1.2rem; }
+.diag-pill{
+  font-family:var(--font-sans); font-weight:700; font-size:0.82rem; color:var(--synapse);
+  border:1px solid rgba(79,216,232,0.35); border-radius:999px; padding:0.4rem 1rem;
+  background:var(--synapse-soft);
+}
+.diag-arrow{ color:var(--ink-faint); font-family:var(--font-mono); font-size:0.9rem; }
 .origin-card{
   position:relative; border:1px solid var(--line); border-radius:10px;
   background-color:var(--cell);
@@ -1460,6 +1468,14 @@ html:not(.js) .crumbs{ display:none; }
     <path d="M80 34h16a6 6 0 0 1 6 6v12a6 6 0 0 1-6 6h-4v8l-9-8h-3"/>
     <line x1="34" y1="31" x2="58" y2="31"/>
     <line x1="34" y1="39" x2="50" y2="39"/>
+  </symbol>
+  <!-- LP：記事ページ＋CTAボタン -->
+  <symbol id="ic-tool-lp" viewBox="0 0 120 84">
+    <rect x="34" y="8" width="52" height="68" rx="6"/>
+    <line x1="44" y1="24" x2="76" y2="24"/>
+    <line x1="44" y1="34" x2="76" y2="34"/>
+    <line x1="44" y1="44" x2="64" y2="44"/>
+    <rect x="44" y="56" width="32" height="12" rx="6"/>
   </symbol>
   <!-- プログラム・自動化：コードブラケット＋歯車の軸 -->
   <symbol id="ic-tool-code" viewBox="0 0 120 84">
@@ -2542,33 +2558,119 @@ html:not(.js) .crumbs{ display:none; }
           </div>
 
           <h4 class="sub">ゴールは売上。SNS・LPO・CRMは、そのための手段</h4>
-          <p>SNSを伸ばすこと自体も、LPを作ること自体も、目的ではない。ゴールは常に売上で、SNS・LPO・記事LP・CRM（LINE）はそこに向かうための手段でしかない。実際にどう手を動かしたかは、以下の通り。</p>
+          <p>SNSを伸ばすこと自体も、LPを作ること自体も、目的ではない。ゴールは常に売上で、SNS・LPO・CRM（LINE）はそこに向かうための手段でしかない。</p>
+
+          <div class="viz-card wide viz">
+            <p class="viz-cap">3つの手段が、売上という一つのゴールに収束する</p>
+            <svg class="flow-svg" viewBox="0 0 560 220" role="img" aria-label="SNS・LPO・CRMの3つの手段が、一人で一気通貫に運用され、売上という一つのゴールへ収束する図">
+              <path class="flow-path anim-draw" d="M150 50 C220 50 245 92 274 106" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+              <path class="flow-path anim-draw" d="M150 112 H 274" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+              <path class="flow-path anim-draw" d="M150 174 C220 174 245 132 274 118" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+              <path class="flow-path anim-draw" d="M346 112 H 444" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+              <circle class="syn-dot" cx="0" cy="0" r="2.8" style="offset-path:path('M150 50 C220 50 245 92 274 106'); animation-delay:0s;"/>
+              <circle class="syn-dot" cx="0" cy="0" r="2.8" style="offset-path:path('M150 174 C220 174 245 132 274 118'); animation-delay:2.2s;"/>
+              <circle class="syn-dot" cx="0" cy="0" r="2.8" style="offset-path:path('M346 112 H 444'); animation-delay:4.4s;"/>
+
+              <g class="anim-fade" style="transition-delay:.05s">
+                <circle class="syn-node" cx="140" cy="50" r="3.4"/><text class="flow-label" x="128" y="46" text-anchor="end">SNS</text><text class="flow-sub" x="128" y="60" text-anchor="end">集客の起点</text>
+                <circle class="syn-node" cx="140" cy="112" r="3.4"/><text class="flow-label" x="128" y="108" text-anchor="end">LPO</text><text class="flow-sub" x="128" y="122" text-anchor="end">記事LP設計・改善</text>
+                <circle class="syn-node" cx="140" cy="174" r="3.4"/><text class="flow-label" x="128" y="170" text-anchor="end">CRM</text><text class="flow-sub" x="128" y="184" text-anchor="end">関係構築と販売</text>
+              </g>
+
+              <g class="anim-fade" style="transition-delay:.35s">
+                <circle cx="310" cy="112" r="36" fill="var(--cell)" stroke="var(--synapse)" stroke-width="1.3"/>
+                <circle cx="310" cy="112" r="42" fill="none" stroke="rgba(79,216,232,0.25)" stroke-width="1" stroke-dasharray="3 5"/>
+                <text class="flow-label" x="310" y="108" text-anchor="middle">一人で</text>
+                <text class="flow-label" x="310" y="126" text-anchor="middle">一気通貫</text>
+              </g>
+
+              <g class="anim-fade" style="transition-delay:.6s">
+                <circle cx="460" cy="112" r="13" fill="none" stroke="rgba(255,180,84,0.4)" stroke-width="1"/>
+                <circle cx="460" cy="112" r="6.5" fill="#ffb454"/>
+                <text class="flow-label" x="460" y="152" text-anchor="middle">売上</text>
+                <text class="flow-sub" x="460" y="170" text-anchor="middle">月商最大約100万円</text>
+              </g>
+            </svg>
+          </div>
+
           <div class="tool-grid">
-            <div class="origin-card fx">
-              <h4>SNS<span class="chip violet">集客の起点</span></h4>
+            <div class="tool-tile fx">
+              <div class="tt-head"><span class="tt-icon tone-c1" aria-hidden="true"><svg class="ic"><use href="#ic-tool-sns"></use></svg></span><h4>SNS<span class="chip violet">集客の起点</span></h4></div>
+              <div class="stat-tile">
+                <div class="value"><span data-count="4000">4,000</span><span class="unit">人</span></div>
+                <p class="note">半年間のInstagramフォロワー増加数。年間12,000人市場の約1/4規模まで集客を拡大。</p>
+              </div>
               <ul>
                 <li>Instagramアカウントを0→1で開設し、投稿企画・運用を一人で担当</li>
-                <li>対象を理学療法士国家試験受験者（年間12,000人市場）に絞り込み、当事者にしか響かない言葉で発信</li>
-                <li>半年でフォロワー4,000人、市場の約1/4規模まで集客を拡大</li>
+                <li>対象を理学療法士国家試験受験者に絞り込み、当事者にしか響かない言葉で発信</li>
               </ul>
             </div>
-            <div class="origin-card fx">
-              <h4>LPO<span class="chip gold">記事LPの設計・改善</span></h4>
+            <div class="tool-tile fx">
+              <div class="tt-head"><span class="tt-icon tone-c2" aria-hidden="true"><svg class="ic"><use href="#ic-tool-lp"></use></svg></span><h4>LPO<span class="chip gold">記事LPの設計・改善</span></h4></div>
+              <div class="stat-tile">
+                <div class="value"><span data-count="2">2</span><span class="unit">本の記事LP</span></div>
+                <p class="note">Instagram→LINE登録のオプトイン記事LPと、LINE→購入の教育記事LP。</p>
+              </div>
               <ul>
-                <li>Instagram→LINE登録のオプトイン記事LP、LINE→購入の教育記事LPの2本を自分で執筆・制作</li>
                 <li>開封率・CTR・アクション率・CVRを見て、どこで心理的につまずいているかを仮説として立てる</li>
-                <li>例：開封率が伸びなければタイトルを、アクション率が伸びなければ実例・安心材料を変更し、書き直す</li>
+                <li>例：開封率が伸びなければタイトルを、アクション率が伸びなければ実例・安心材料を変更</li>
               </ul>
             </div>
-            <div class="origin-card fx">
-              <h4>CRM（LINE）<span class="chip green">関係構築と販売</span></h4>
+            <div class="tool-tile fx">
+              <div class="tt-head"><span class="tt-icon tone-c4" aria-hidden="true"><svg class="ic"><use href="#ic-tool-crm"></use></svg></span><h4>CRM（LINE）<span class="chip green">関係構築と販売</span></h4></div>
+              <div class="stat-tile">
+                <div class="value">2,000〜3,000<span class="unit">人</span></div>
+                <p class="note">LINE登録者数。教材・指導の販売につなげた。</p>
+              </div>
               <ul>
                 <li>LINE公式アカウントで教材・指導を販売する導線を設計</li>
                 <li>登録直後に売り込まず、教育コンテンツを配信して信頼を積み上げてから販売</li>
-                <li>LINE登録は2,000〜3,000人まで拡大し、教材・指導の販売につなげた</li>
               </ul>
             </div>
           </div>
+
+          <div class="viz-card wide viz">
+            <p class="viz-cap">カスタマージャーニー全体：Instagram → 記事LP → LINE → 記事LP → セールス文章 → 購入</p>
+            <svg class="flow-svg" viewBox="0 0 680 150" role="img" aria-label="Instagram、記事LP、LINE、記事LP、セールス文章、購入の6段階が一気通貫でつながるジャーニー図">
+              <path class="flow-path anim-draw" d="M40 55 H620" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+              <circle class="syn-dot" cx="0" cy="0" r="3" style="offset-path:path('M40 55 H620'); animation-delay:0s;"/>
+              <circle class="syn-dot" cx="0" cy="0" r="3" style="offset-path:path('M40 55 H620'); animation-delay:2.6s;"/>
+
+              <g class="flow-node anim-fade" style="transition-delay:.05s"><circle cx="40" cy="55" r="15"/><text x="40" y="60" text-anchor="middle">1</text></g>
+              <text class="flow-label" x="40" y="95" text-anchor="middle">Instagram</text><text class="flow-sub" x="40" y="112" text-anchor="middle">認知</text>
+
+              <g class="flow-node anim-fade" style="transition-delay:.2s"><circle cx="156" cy="55" r="15"/><text x="156" y="60" text-anchor="middle">2</text></g>
+              <text class="flow-label" x="156" y="95" text-anchor="middle">記事LP①</text><text class="flow-sub" x="156" y="112" text-anchor="middle">興味 → 行動</text>
+
+              <g class="flow-node anim-fade" style="transition-delay:.35s"><circle cx="272" cy="55" r="15"/><text x="272" y="60" text-anchor="middle">3</text></g>
+              <text class="flow-label" x="272" y="95" text-anchor="middle">LINE</text><text class="flow-sub" x="272" y="112" text-anchor="middle">見込み客化</text>
+
+              <g class="flow-node anim-fade" style="transition-delay:.5s"><circle cx="388" cy="55" r="15"/><text x="388" y="60" text-anchor="middle">4</text></g>
+              <text class="flow-label" x="388" y="95" text-anchor="middle">記事LP②</text><text class="flow-sub" x="388" y="112" text-anchor="middle">教育・理解</text>
+
+              <g class="flow-node anim-fade" style="transition-delay:.65s"><circle cx="504" cy="55" r="15"/><text x="504" y="60" text-anchor="middle">5</text></g>
+              <text class="flow-label" x="504" y="95" text-anchor="middle">セールス文章</text><text class="flow-sub" x="504" y="112" text-anchor="middle">決断の後押し</text>
+
+              <g class="anim-fade" style="transition-delay:.8s">
+                <circle cx="620" cy="55" r="9" fill="#ffb454"/>
+                <circle cx="620" cy="55" r="15" fill="none" stroke="rgba(255,180,84,0.4)" stroke-width="1"/>
+              </g>
+              <text class="flow-label" x="620" y="95" text-anchor="middle" fill="#ffb454">購入</text>
+            </svg>
+            <p class="viz-note">※ 媒体（Instagram／LINE）とLPとでは設計すべき人間心理・感情がまったく違う。LPはその間を埋める「クッション」として、認知から購入までの心理的な段差を要素分解してつなぐ役割を持つ。</p>
+          </div>
+
+          <div class="viz-card wide viz">
+            <p class="viz-cap">記事LP改善の考え方：指標を追い、心理のつまずきを直す</p>
+            <div class="diag-strip">
+              <span class="diag-pill">開封率</span><span class="diag-arrow">→</span>
+              <span class="diag-pill">記事内CTR</span><span class="diag-arrow">→</span>
+              <span class="diag-pill">アクション率</span><span class="diag-arrow">→</span>
+              <span class="diag-pill">CVR</span>
+            </div>
+            <p class="viz-note">※ どの指標が動いたら、どんな心理的つまずき（タイトルで自分ごと化できていない／共感が弱い／安心材料が不足／リスク不安が残る）を疑い、記事のどこを直すか——という診断の型で改善を繰り返した。</p>
+          </div>
+
           <p class="viz-note">※ SNS・LPO・CRMはそれぞれ独立した専門スキルではなく、「売上」という一つのゴールに対する手段。どれか一つを極めるより、3つを行き来しながら今どこがボトルネックかを判断し、実際に手を動かして改善し続けるのが自分のマーケティングの型。</p>
 
           <p class="work-note">※ ここでマーケティングの面白さに気づき、キャリアの起点となった。月商は最大約100万円まで到達。</p>
