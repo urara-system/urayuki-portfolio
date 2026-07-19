@@ -4666,7 +4666,15 @@ html:not(.js) .crumbs{ display:none; }
        （rAFが間引かれる環境でも「opacity:0のまま凍結」しない）。
        初期サイズ計測が0だった場合は rAF で再試行（レイアウト前実行対策）。
      - 透過背景・自動回転(約38秒/周)・マウス追従の微小パララックス
-     - prefers-reduced-motion: reduce では回転・脈動・波紋を止め静止画を描画
+     - 質感：核・ノード・結実球はフレネル（縁光）ShaderMaterial、
+       グローは soft/hot 2種の CanvasTexture スプライトを多層加算合成
+       （フルスクリーンのブルームパスは使わない＝統合GPUでも軽量）。
+       ShaderMaterial 生成失敗時は MeshBasicMaterial にフォールバック。
+     - 枝ラインは頂点カラーの根元→先端グラデーション＋加算合成。
+       核→外殻へ線上を流れるエネルギーパルス（Points 1ドローコール）。
+     - カメラ：微小なシネマティックドリフト（Lissajous軌道＋呼吸ドリー）と
+       スクロール進捗に応じた僅かなドリーアウト／チルト
+     - prefers-reduced-motion: reduce では回転・脈動・波紋・ドリフトを止め静止画を描画
      - タブ非表示時／他ビュー表示時（portfolio:viewイベント）はループ停止
      ===================================================== -->
 <script type="module">
@@ -4739,6 +4747,7 @@ html:not(.js) .crumbs{ display:none; }
   var CYAN = 0x4fd8e8;        /* --synapse */
   var CYAN_BRIGHT = 0x8beaf5; /* --synapse-bright */
   var AMBER = 0xffb454;       /* 結実＝成果の色（この意味専用） */
+  var AMBER_RIM = 0xffdcaa;   /* 結実球のリムハイライト（--fruit の明色。結実表現の内側のみで使用） */
   var R1 = 3.4, R2 = 6.2, R3 = 9;
 
   var scene = new THREE.Scene();
@@ -4753,25 +4762,71 @@ html:not(.js) .crumbs{ display:none; }
   var BASE_TILT_X = 0.42, BASE_TILT_Z = 0.10;
   pivot.rotation.set(BASE_TILT_X, 0, BASE_TILT_Z);
 
-  /* 発光スプライト用のラジアルグラデーションテクスチャ（ポストプロセス無しの簡易グロー） */
-  var glowCanvas = document.createElement('canvas');
-  glowCanvas.width = glowCanvas.height = 64;
-  var gctx = glowCanvas.getContext('2d');
-  var grad = gctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  grad.addColorStop(0, 'rgba(255,255,255,0.9)');
-  grad.addColorStop(0.35, 'rgba(255,255,255,0.28)');
-  grad.addColorStop(1, 'rgba(255,255,255,0)');
-  gctx.fillStyle = grad;
-  gctx.fillRect(0, 0, 64, 64);
-  var glowTx = new THREE.CanvasTexture(glowCanvas);
+  /* 発光スプライト用テクスチャ（フルスクリーンのブルームパスは使わない疑似ブルーム）
+     softTx＝裾の長い広いハロー／hotTx＝中心の熱いコア。2枚を加算合成で重ねることで
+     ポストプロセス無しでも奥行きのある発光を作る（低負荷・統合GPUでも60fps維持）。 */
+  function radialTx(size, stops) {
+    var c = document.createElement('canvas');
+    c.width = c.height = size;
+    var g = c.getContext('2d');
+    var grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    stops.forEach(function (s) { grad.addColorStop(s[0], 'rgba(255,255,255,' + s[1] + ')'); });
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(c);
+  }
+  var softTx = radialTx(128, [[0, 0.85], [0.22, 0.34], [0.5, 0.12], [0.78, 0.03], [1, 0]]);
+  var hotTx = radialTx(64, [[0, 1], [0.16, 0.6], [0.42, 0.16], [1, 0]]);
+
+  /* フレネル（縁が明るく光る）シェーダ：フラット塗りの球を「内側から発光する
+     エネルギー体」に見せる。ShaderMaterial の生成に失敗した環境では従来の
+     MeshBasicMaterial にフォールバックし、描画が必ず出ることを保証する。 */
+  function makeGlowSphereMat(baseHex, rimHex, base) {
+    try {
+      return new THREE.ShaderMaterial({
+        uniforms: {
+          uColor: { value: new THREE.Color(baseHex) },
+          uRim: { value: new THREE.Color(rimHex) },
+          uOpacity: { value: 1 },
+          uBase: { value: base }
+        },
+        vertexShader:
+          'varying vec3 vN; varying vec3 vV;\n' +
+          'void main(){\n' +
+          '  vN = normalize(normalMatrix * normal);\n' +
+          '  vec4 mv = modelViewMatrix * vec4(position, 1.0);\n' +
+          '  vV = normalize(-mv.xyz);\n' +
+          '  gl_Position = projectionMatrix * mv;\n' +
+          '}',
+        fragmentShader:
+          'uniform vec3 uColor; uniform vec3 uRim; uniform float uOpacity; uniform float uBase;\n' +
+          'varying vec3 vN; varying vec3 vV;\n' +
+          'void main(){\n' +
+          '  float fr = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.0);\n' +
+          '  vec3 col = mix(uColor, uRim, fr) + uRim * fr * 0.55;\n' +
+          '  float a = uOpacity * (uBase + (1.0 - uBase) * fr);\n' +
+          '  gl_FragColor = vec4(col, a);\n' +
+          '}',
+        transparent: true
+      });
+    } catch (e) {
+      return new THREE.MeshBasicMaterial({ color: baseHex });
+    }
+  }
 
   /* 出現シーケンス（旧2D版の draw-on 順序を踏襲：核→世代1→世代2→外殻→結実） */
   var T_CORE = 0.15, T_G1 = 0.55, T_G2 = 1.05, T_G3 = 1.55, T_RING = 1.9, T_FRUIT = 2.3;
   var FADE_DUR = 0.9;
   var fades = [];
+  /* ShaderMaterial は .opacity ではなく uOpacity uniform で透明度を制御するため、
+     どちらのマテリアルにも同じインターフェースで書き込めるヘルパを介す */
+  function setOpacity(mat, o) {
+    if (mat.uniforms && mat.uniforms.uOpacity) mat.uniforms.uOpacity.value = o;
+    else mat.opacity = o;
+  }
   function fadeMat(mat, target, start) {
     mat.transparent = true;
-    mat.opacity = reduced ? target : 0;
+    setOpacity(mat, reduced ? target : 0);
     fades.push({ mat: mat, target: target, start: start });
     return mat;
   }
@@ -4805,14 +4860,24 @@ html:not(.js) .crumbs{ display:none; }
     });
   });
 
-  function addLines(pts, opacity, start) {
+  /* 枝ライン：頂点カラーで根元→先端のグラデーション（エネルギーが核から
+     流れ出す方向性を線そのものに持たせる）。加算合成で交差部が仄かに増光。 */
+  function addLines(pts, opacity, start, bIn, bOut) {
     var geo = new THREE.BufferGeometry().setFromPoints(pts);
-    var mat = fadeMat(new THREE.LineBasicMaterial({ color: CYAN }), opacity, start);
+    var cols = new Float32Array(pts.length * 3);
+    var cIn = new THREE.Color(CYAN).multiplyScalar(bIn);
+    var cOut = new THREE.Color(CYAN).multiplyScalar(bOut);
+    for (var i = 0; i < pts.length; i += 2) {
+      cols[i * 3] = cIn.r; cols[i * 3 + 1] = cIn.g; cols[i * 3 + 2] = cIn.b;
+      cols[i * 3 + 3] = cOut.r; cols[i * 3 + 4] = cOut.g; cols[i * 3 + 5] = cOut.b;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+    var mat = fadeMat(new THREE.LineBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending, depthWrite: false }), opacity, start);
     spin.add(new THREE.LineSegments(geo, mat));
   }
-  addLines(seg1, 0.5, T_G1);
-  addLines(seg2, 0.42, T_G2);
-  addLines(seg3, 0.35, T_G3);
+  addLines(seg1, 0.62, T_G1, 1.0, 0.5);
+  addLines(seg2, 0.52, T_G2, 0.85, 0.45);
+  addLines(seg3, 0.46, T_G3, 0.7, 0.4);
 
   /* 外殻を示す大円リング3本（直交配置） */
   var ringPts = [];
@@ -4821,17 +4886,18 @@ html:not(.js) .crumbs{ display:none; }
     ringPts.push(new THREE.Vector3(Math.cos(a) * R3, 0, Math.sin(a) * R3));
   }
   var ringGeo = new THREE.BufferGeometry().setFromPoints(ringPts);
-  var ringMat = fadeMat(new THREE.LineBasicMaterial({ color: CYAN }), 0.28, T_RING);
+  var ringMat = fadeMat(new THREE.LineBasicMaterial({ color: CYAN, blending: THREE.AdditiveBlending, depthWrite: false }), 0.3, T_RING);
   [[0, 0, 0], [Math.PI / 2, 0, 0], [0, 0, Math.PI / 2]].forEach(function (r) {
     var ring = new THREE.Line(ringGeo, ringMat);
     ring.rotation.set(r[0], r[1], r[2]);
     spin.add(ring);
   });
 
-  /* ノード（球）。ジオメトリは共有し scale で大きさを変える */
-  var nodeGeo = new THREE.SphereGeometry(1, 12, 10);
+  /* ノード（球）。ジオメトリは共有し scale で大きさを変える。
+     フレネルシェーダで小さな球も「点」ではなく「灯り」として読める質感に */
+  var nodeGeo = new THREE.SphereGeometry(1, 16, 12);
   function addNodes(tips, radius, opacity, start) {
-    var mat = fadeMat(new THREE.MeshBasicMaterial({ color: CYAN }), opacity, start);
+    var mat = fadeMat(makeGlowSphereMat(CYAN, CYAN_BRIGHT, 0.72), opacity, start);
     tips.forEach(function (p) {
       var m = new THREE.Mesh(nodeGeo, mat);
       m.scale.setScalar(radius);
@@ -4843,19 +4909,30 @@ html:not(.js) .crumbs{ display:none; }
   addNodes(tips2, 0.12, 0.9, T_G2 + 0.2);
   addNodes(tips3.filter(function (_, i) { return i % 2 === 1; }), 0.13, 0.9, T_G3 + 0.2);
 
-  /* 核：シアンの球＋加算合成グロー、脈動 */
-  var coreMat = fadeMat(new THREE.MeshBasicMaterial({ color: CYAN_BRIGHT }), 1, T_CORE);
-  var core = new THREE.Mesh(nodeGeo, coreMat);
+  /* 核：フレネル発光球＋3層グロー（熱い中心／中間グロー／大気ハロー）。
+     グロー層は depthTest:false ＋ renderOrder で常に手前に合成し、
+     球のデプスに食われて中心が暗く見える事故を防ぐ。 */
+  var coreGeo = new THREE.SphereGeometry(1, 32, 24);
+  var coreMat = fadeMat(makeGlowSphereMat(CYAN, CYAN_BRIGHT, 0.85), 1, T_CORE);
+  var core = new THREE.Mesh(coreGeo, coreMat);
   core.scale.setScalar(0.5);
   spin.add(core);
-  var coreGlowMat = fadeMat(new THREE.SpriteMaterial({ map: glowTx, color: CYAN, blending: THREE.AdditiveBlending, depthWrite: false }), 0.9, T_CORE);
-  var coreGlow = new THREE.Sprite(coreGlowMat);
-  coreGlow.scale.setScalar(3.4);
-  spin.add(coreGlow);
+  function glowSprite(map, colorHex, scale, opacity, start, order) {
+    var mat = fadeMat(new THREE.SpriteMaterial({ map: map, color: colorHex, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }), opacity, start);
+    var sp = new THREE.Sprite(mat);
+    sp.scale.setScalar(scale);
+    sp.renderOrder = order;
+    spin.add(sp);
+    return sp;
+  }
+  var coreHot = glowSprite(hotTx, CYAN_BRIGHT, 2.1, 0.95, T_CORE, 6);
+  var coreGlow = glowSprite(softTx, CYAN, 4.4, 0.8, T_CORE, 5);
+  var coreHalo = glowSprite(softTx, CYAN, 9.5, 0.26, T_CORE, 4);
 
-  /* 結実（外周12点のうち6点）：琥珀の球＋グロー＋外へ広がる波紋リング×2 */
-  var fruitMat = fadeMat(new THREE.MeshBasicMaterial({ color: AMBER }), 1, T_FRUIT);
-  var fruitGlowMat = fadeMat(new THREE.SpriteMaterial({ map: glowTx, color: AMBER, blending: THREE.AdditiveBlending, depthWrite: false }), 0.85, T_FRUIT);
+  /* 結実（外周12点のうち6点）：琥珀の球＋2層グロー＋外へ広がる波紋リング×2 */
+  var fruitMat = fadeMat(makeGlowSphereMat(AMBER, AMBER_RIM, 0.85), 1, T_FRUIT);
+  var fruitHotMat = fadeMat(new THREE.SpriteMaterial({ map: hotTx, color: AMBER, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }), 0.9, T_FRUIT);
+  var fruitGlowMat = fadeMat(new THREE.SpriteMaterial({ map: softTx, color: AMBER, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }), 0.6, T_FRUIT);
   var rippleGeo = new THREE.RingGeometry(0.94, 1, 48);
   var RIPPLE_CYCLE = 3.6;
   var fruits = [], ripples = [];
@@ -4863,11 +4940,17 @@ html:not(.js) .crumbs{ display:none; }
     var f = new THREE.Mesh(nodeGeo, fruitMat);
     f.position.copy(p);
     spin.add(f);
+    var hot = new THREE.Sprite(fruitHotMat);
+    hot.position.copy(p);
+    hot.scale.setScalar(1.35);
+    hot.renderOrder = 6;
+    spin.add(hot);
     var g = new THREE.Sprite(fruitGlowMat);
     g.position.copy(p);
-    g.scale.setScalar(2.4);
+    g.scale.setScalar(3.1);
+    g.renderOrder = 5;
     spin.add(g);
-    fruits.push({ mesh: f, glow: g, phase: i * 1.05 });
+    fruits.push({ mesh: f, hot: hot, glow: g, phase: i * 1.05 });
     for (var j = 0; j < 2; j++) {
       var rmat = new THREE.MeshBasicMaterial({ color: AMBER, transparent: true, opacity: 0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false });
       var rm = new THREE.Mesh(rippleGeo, rmat);
@@ -4877,6 +4960,36 @@ html:not(.js) .crumbs{ display:none; }
       ripples.push({ mesh: rm, mat: rmat, delay: T_FRUIT + 0.4 + i * 0.35 + j * 1.8 });
     }
   });
+
+  /* エネルギーパルス：核→第1分岐→第2分岐→外殻へと線上を流れる光点。
+     「核となる想いが外へ伝わっていく」メタファーを運動として可視化する。
+     1ジオメトリ＋1ドローコールの Points で更新は24点ぶんの座標のみ（超軽量）。 */
+  var paths = [], PULSES_PER_PATH = 2, PULSE_CYCLE = 5.2;
+  tips3.forEach(function (p3, j) {
+    var pts = [new THREE.Vector3(0, 0, 0), tips1[j >> 1], tips2[j], p3];
+    var lens = [0], total = 0;
+    for (var i = 1; i < pts.length; i++) { total += pts[i].distanceTo(pts[i - 1]); lens.push(total); }
+    paths.push({ pts: pts, lens: lens, total: total, phase: (j * 0.37) % 1 });
+  });
+  var pulseCount = paths.length * PULSES_PER_PATH;
+  var pulsePos = new Float32Array(pulseCount * 3);
+  var pulseGeo = new THREE.BufferGeometry();
+  pulseGeo.setAttribute('position', new THREE.BufferAttribute(pulsePos, 3));
+  var pulseMat = fadeMat(new THREE.PointsMaterial({ map: hotTx, color: CYAN_BRIGHT, size: 0.55, sizeAttenuation: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }), 0.85, T_G3 + 0.3);
+  var pulsePoints = new THREE.Points(pulseGeo, pulseMat);
+  pulsePoints.renderOrder = 3;
+  pulsePoints.frustumCulled = false;
+  spin.add(pulsePoints);
+  var pulseTmp = new THREE.Vector3();
+  function placePulse(idx, path, prog) {
+    var d = prog * path.total, i = 1;
+    while (i < path.lens.length - 1 && path.lens[i] < d) i++;
+    var f = (d - path.lens[i - 1]) / (path.lens[i] - path.lens[i - 1]);
+    pulseTmp.copy(path.pts[i - 1]).lerp(path.pts[i], f);
+    pulsePos[idx * 3] = pulseTmp.x;
+    pulsePos[idx * 3 + 1] = pulseTmp.y;
+    pulsePos[idx * 3 + 2] = pulseTmp.z;
+  }
 
   /* ---- アニメーション ----
      出現フェードの時刻 t は rAF の累積デルタではなく performance.now 基準の
@@ -4893,32 +5006,65 @@ html:not(.js) .crumbs{ display:none; }
     }, { passive: true });
   }
 
+  /* スクロール連動：ヒーロー1画面ぶんをスクロールし切るまでの進捗(0..1)で
+     僅かにドリーアウト＋チルトを深める。テキストの可読性を損なわない微小量。 */
+  var scrollP = 0;
+  function readScroll() {
+    var h = host.clientHeight || innerHeight;
+    var y = window.scrollY || document.documentElement.scrollTop || 0;
+    scrollP = Math.max(0, Math.min(1, y / Math.max(1, h)));
+  }
+  if (!reduced) {
+    addEventListener('scroll', readScroll, { passive: true });
+    readScroll();
+  }
+
   function smooth(p) { return p <= 0 ? 0 : p >= 1 ? 1 : p * p * (3 - 2 * p); }
+
+  var baseZ = 30; /* resize() がアスペクト比から再計算して上書きする */
 
   function update(dt) {
     if (!reduced) t = (performance.now() - startTime) / 1000;
     for (var i = 0; i < fades.length; i++) {
       var f = fades[i];
-      f.mat.opacity = f.target * smooth((t - f.start) / FADE_DUR);
+      setOpacity(f.mat, f.target * smooth((t - f.start) / FADE_DUR));
     }
+    /* エネルギーパルスの位置更新（reduce時も一度だけ実行され静止画に光点が乗る） */
+    for (var pi = 0; pi < paths.length; pi++) {
+      for (var w = 0; w < PULSES_PER_PATH; w++) {
+        var prog = (t / PULSE_CYCLE + paths[pi].phase + w / PULSES_PER_PATH) % 1;
+        placePulse(pi * PULSES_PER_PATH + w, paths[pi], smooth(prog));
+      }
+    }
+    pulseGeo.attributes.position.needsUpdate = true;
     if (!reduced) {
       spin.rotation.y += dt * (Math.PI * 2 / 38); /* 約38秒で1回転 */
+      spin.rotation.z = Math.sin(t * 0.07) * 0.05; /* ごく緩い歳差＝機械的な等速回転に見せない */
       var k = Math.min(1, dt * 3);
-      pivot.rotation.x += ((BASE_TILT_X + mouse.y * 0.10) - pivot.rotation.x) * k;
+      pivot.rotation.x += ((BASE_TILT_X + mouse.y * 0.10 + scrollP * 0.14) - pivot.rotation.x) * k;
       pivot.rotation.y += ((mouse.x * 0.12) - pivot.rotation.y) * k;
-      core.scale.setScalar(0.5 * (1 + Math.sin(t * 1.9) * 0.12));
-      coreGlow.scale.setScalar(3.4 * (1 + Math.sin(t * 1.9) * 0.18));
+      /* シネマティックドリフト：ポインタが止まっていても画がゆっくり生きて見える
+         微小なカメラ軌道（トラック＋呼吸するようなドリー）。スクロールで少し引く。 */
+      camera.position.x = Math.sin(t * 0.10) * 0.55 + Math.sin(t * 0.023) * 0.35;
+      camera.position.y = Math.cos(t * 0.083) * 0.42;
+      camera.position.z = baseZ * (1 + Math.sin(t * 0.05) * 0.012 + scrollP * 0.09);
+      var pulse = Math.sin(t * 1.9);
+      core.scale.setScalar(0.5 * (1 + pulse * 0.1));
+      coreHot.scale.setScalar(2.1 * (1 + pulse * 0.16));
+      coreGlow.scale.setScalar(4.4 * (1 + pulse * 0.18));
+      coreHalo.scale.setScalar(9.5 * (1 + Math.sin(t * 0.9) * 0.07)); /* ハローは別周期でゆっくり呼吸 */
       fruits.forEach(function (fr) {
         var s = Math.sin(t * 2.3 + fr.phase);
-        fr.mesh.scale.setScalar(0.3 * (1 + s * 0.18));
-        fr.glow.scale.setScalar(2.4 * (1 + s * 0.22));
+        fr.mesh.scale.setScalar(0.3 * (1 + s * 0.16));
+        fr.hot.scale.setScalar(1.35 * (1 + s * 0.2));
+        fr.glow.scale.setScalar(3.1 * (1 + s * 0.24));
       });
       ripples.forEach(function (r) {
         var lt = t - r.delay;
         if (lt < 0) { r.mat.opacity = 0; return; }
         var p = (lt % RIPPLE_CYCLE) / RIPPLE_CYCLE;
         r.mesh.scale.setScalar(0.35 + p * 3.4);
-        r.mat.opacity = 0.55 * (1 - p) * (1 - p);
+        r.mat.opacity = 0.55 * (1 - p) * (1 - p) * smooth(Math.min(1, p * 6)); /* 出現時のポップを抑える */
       });
     } else {
       fruits.forEach(function (fr) { fr.mesh.scale.setScalar(0.3); });
@@ -4967,7 +5113,8 @@ html:not(.js) .crumbs{ display:none; }
     var half = Math.tan(camera.fov * Math.PI / 360);
     var z = FIT / half;                          /* 高さ基準でフィット */
     if (aspect < 1) z = FIT / (half * aspect);   /* 縦長画面は幅基準 */
-    camera.position.z = z;
+    baseZ = z;             /* ドリフト・スクロールドリーの基準距離 */
+    camera.position.z = z; /* reduce時・停止時はドリフトが走らないため直接も設定 */
     camera.updateProjectionMatrix();
     var halfW = half * z * aspect;
     pivot.position.x = aspect > 1.05 ? Math.min(halfW * 0.2, 6.5) : 0;
