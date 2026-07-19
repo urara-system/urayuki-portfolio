@@ -4665,7 +4665,7 @@ html:not(.js) .crumbs{ display:none; }
      - 出現フェードは performance.now 基準の絶対時刻で進める
        （rAFが間引かれる環境でも「opacity:0のまま凍結」しない）。
        初期サイズ計測が0だった場合は rAF で再試行（レイアウト前実行対策）。
-     - 透過背景・自動回転(約38秒/周)・マウス追従の微小パララックス
+     - 透過背景・自動回転(約22秒/周)・マウス追従のパララックス・アイドルウォブル
      - 質感：核・ノード・結実球はフレネル（縁光）ShaderMaterial、
        グローは soft/hot 2種の CanvasTexture スプライトを多層加算合成
        （フルスクリーンのブルームパスは使わない＝統合GPUでも軽量）。
@@ -4934,7 +4934,7 @@ html:not(.js) .crumbs{ display:none; }
   var fruitHotMat = fadeMat(new THREE.SpriteMaterial({ map: hotTx, color: AMBER, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }), 0.9, T_FRUIT);
   var fruitGlowMat = fadeMat(new THREE.SpriteMaterial({ map: softTx, color: AMBER, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }), 0.6, T_FRUIT);
   var rippleGeo = new THREE.RingGeometry(0.94, 1, 48);
-  var RIPPLE_CYCLE = 3.6;
+  var RIPPLE_CYCLE = 2.8;
   var fruits = [], ripples = [];
   tips3.filter(function (_, i) { return i % 2 === 0; }).forEach(function (p, i) {
     var f = new THREE.Mesh(nodeGeo, fruitMat);
@@ -4964,7 +4964,7 @@ html:not(.js) .crumbs{ display:none; }
   /* エネルギーパルス：核→第1分岐→第2分岐→外殻へと線上を流れる光点。
      「核となる想いが外へ伝わっていく」メタファーを運動として可視化する。
      1ジオメトリ＋1ドローコールの Points で更新は24点ぶんの座標のみ（超軽量）。 */
-  var paths = [], PULSES_PER_PATH = 2, PULSE_CYCLE = 5.2;
+  var paths = [], PULSES_PER_PATH = 3, PULSE_CYCLE = 3.4;
   tips3.forEach(function (p3, j) {
     var pts = [new THREE.Vector3(0, 0, 0), tips1[j >> 1], tips2[j], p3];
     var lens = [0], total = 0;
@@ -5038,20 +5038,21 @@ html:not(.js) .crumbs{ display:none; }
     }
     pulseGeo.attributes.position.needsUpdate = true;
     if (!reduced) {
-      spin.rotation.y += dt * (Math.PI * 2 / 38); /* 約38秒で1回転 */
-      spin.rotation.z = Math.sin(t * 0.07) * 0.05; /* ごく緩い歳差＝機械的な等速回転に見せない */
+      spin.rotation.y += dt * (Math.PI * 2 / 22); /* 約22秒で1回転（従来38秒より速く、動きが見える速度に） */
+      spin.rotation.z = Math.sin(t * 0.11) * 0.07; /* ごく緩い歳差＝機械的な等速回転に見せない */
       var k = Math.min(1, dt * 3);
-      pivot.rotation.x += ((BASE_TILT_X + mouse.y * 0.10 + scrollP * 0.14) - pivot.rotation.x) * k;
-      pivot.rotation.y += ((mouse.x * 0.12) - pivot.rotation.y) * k;
+      var idleX = Math.sin(t * 0.17) * 0.05, idleY = Math.cos(t * 0.13) * 0.06; /* ポインタが動かなくても構造自体が呼吸するアイドルウォブル */
+      pivot.rotation.x += ((BASE_TILT_X + idleX + mouse.y * 0.16 + scrollP * 0.14) - pivot.rotation.x) * k;
+      pivot.rotation.y += ((idleY + mouse.x * 0.19) - pivot.rotation.y) * k;
       /* シネマティックドリフト：ポインタが止まっていても画がゆっくり生きて見える
          微小なカメラ軌道（トラック＋呼吸するようなドリー）。スクロールで少し引く。 */
-      camera.position.x = Math.sin(t * 0.10) * 0.55 + Math.sin(t * 0.023) * 0.35;
-      camera.position.y = Math.cos(t * 0.083) * 0.42;
-      camera.position.z = baseZ * (1 + Math.sin(t * 0.05) * 0.012 + scrollP * 0.09);
+      camera.position.x = Math.sin(t * 0.14) * 0.85 + Math.sin(t * 0.033) * 0.5;
+      camera.position.y = Math.cos(t * 0.11) * 0.62;
+      camera.position.z = baseZ * (1 + Math.sin(t * 0.07) * 0.02 + scrollP * 0.09);
       var pulse = Math.sin(t * 1.9);
-      core.scale.setScalar(0.5 * (1 + pulse * 0.1));
-      coreHot.scale.setScalar(2.1 * (1 + pulse * 0.16));
-      coreGlow.scale.setScalar(4.4 * (1 + pulse * 0.18));
+      core.scale.setScalar(0.5 * (1 + pulse * 0.14));
+      coreHot.scale.setScalar(2.1 * (1 + pulse * 0.22));
+      coreGlow.scale.setScalar(4.4 * (1 + pulse * 0.24));
       coreHalo.scale.setScalar(9.5 * (1 + Math.sin(t * 0.9) * 0.07)); /* ハローは別周期でゆっくり呼吸 */
       fruits.forEach(function (fr) {
         var s = Math.sin(t * 2.3 + fr.phase);
@@ -5063,8 +5064,8 @@ html:not(.js) .crumbs{ display:none; }
         var lt = t - r.delay;
         if (lt < 0) { r.mat.opacity = 0; return; }
         var p = (lt % RIPPLE_CYCLE) / RIPPLE_CYCLE;
-        r.mesh.scale.setScalar(0.35 + p * 3.4);
-        r.mat.opacity = 0.55 * (1 - p) * (1 - p) * smooth(Math.min(1, p * 6)); /* 出現時のポップを抑える */
+        r.mesh.scale.setScalar(0.35 + p * 4.2);
+        r.mat.opacity = 0.65 * (1 - p) * (1 - p) * smooth(Math.min(1, p * 6)); /* 出現時のポップを抑える */
       });
     } else {
       fruits.forEach(function (fr) { fr.mesh.scale.setScalar(0.3); });
